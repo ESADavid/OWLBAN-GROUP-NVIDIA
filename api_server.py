@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timezone
 import secrets
 import time
+import uuid
 from typing import Dict, List, Optional, Any
 
 import uvicorn
@@ -186,6 +187,65 @@ class SystemStatus(BaseModel):
     gpu_status: Optional[Dict[str, Any]] = None
     database_status: Optional[Dict[str, Any]] = None
     monitoring: Optional[Dict[str, Any]] = None
+
+# =============================================================================
+# Employee Benefits and Payroll Models
+# =============================================================================
+
+class EmployeeCreate(BaseModel):
+    employee_id: str
+    first_name: str
+    last_name: str
+    email: str
+    phone: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    salary: Optional[float] = None
+    hire_date: Optional[str] = None
+
+class EmployeeUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    position: Optional[str] = None
+    department: Optional[str] = None
+    salary: Optional[float] = None
+    employment_status: Optional[str] = None
+
+class BenefitsCreate(BaseModel):
+    employee_id: str
+    health_insurance_plan: Optional[str] = None
+    health_insurance_provider: Optional[str] = None
+    health_insurance_premium: Optional[float] = None
+    health_insurance_coverage_type: Optional[str] = None
+    life_insurance_status: str = "not_enrolled"
+    life_insurance_amount: Optional[float] = None
+    life_insurance_provider: Optional[str] = None
+    life_insurance_premium: Optional[float] = None
+    life_insurance_beneficiary: Optional[str] = None
+    k401_enrolled: bool = False
+    k401_contribution_percentage: Optional[float] = None
+    k401_employer_match_percentage: Optional[float] = None
+
+class PayrollProcess(BaseModel):
+    employee_id: str
+    pay_period_start: str
+    pay_period_end: str
+    pay_date: str
+    base_salary: float
+    overtime_pay: float = 0
+    bonuses: float = 0
+    commissions: float = 0
+    federal_tax_rate: float = 0.22
+    state_tax_rate: float = 0.05
+    social_security_rate: float = 0.062
+    medicare_rate: float = 0.0145
+    health_insurance_premium: float = 0
+    life_insurance_premium: float = 0
+    k401_contribution: float = 0
+    other_deductions: float = 0
+    payment_method: str = "direct_deposit"
 
 class LogEntry(BaseModel):
     level: str
@@ -406,6 +466,254 @@ async def save_metric(metric_name: str, value: float, tags: Optional[Dict] = Non
         return {"message": "Metric saved", "user": username}
     except Exception as e:
         logger.error("Failed to save metric: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+# Import uuid at the top
+import uuid
+
+# =============================================================================
+# Employee Management Endpoints
+# =============================================================================
+
+@fastapi_app.post("/employees")
+async def create_employee(employee: EmployeeCreate):
+    """Create a new employee"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        result = DB_MANAGER.add_employee(
+            employee_id=employee.employee_id,
+            first_name=employee.first_name,
+            last_name=employee.last_name,
+            email=employee.email,
+            phone=employee.phone,
+            position=employee.position,
+            department=employee.department,
+            salary=employee.salary,
+            hire_date=employee.hire_date
+        )
+        if result:
+            return {"message": "Employee created", "employee_id": employee.employee_id}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create employee")
+    except Exception as e:
+        logger.error("Create employee failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/employees/{employee_id}")
+async def get_employee(employee_id: str):
+    """Get employee by ID"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        employee = DB_MANAGER.get_employee(employee_id)
+        if employee:
+            return {"employee": employee}
+        else:
+            raise HTTPException(status_code=404, detail="Employee not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Get employee failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/employees")
+async def list_employees(department: Optional[str] = None, status: Optional[str] = None, limit: int = 100):
+    """List all employees"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        employees = DB_MANAGER.get_all_employees(department, status, limit)
+        return {"employees": employees, "count": len(employees)}
+    except Exception as e:
+        logger.error("List employees failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.put("/employees/{employee_id}")
+async def update_employee(employee_id: str, employee: EmployeeUpdate):
+    """Update employee information"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        update_data = employee.model_dump(exclude_unset=True)
+        if update_data:
+            result = DB_MANAGER.update_employee(employee_id, **update_data)
+            if result:
+                return {"message": "Employee updated", "employee_id": employee_id}
+            else:
+                raise HTTPException(status_code=400, detail="Failed to update employee")
+        else:
+            return {"message": "No changes to update", "employee_id": employee_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Update employee failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.delete("/employees/{employee_id}")
+async def delete_employee(employee_id: str):
+    """Delete an employee"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        result = DB_MANAGER.delete_employee(employee_id)
+        if result:
+            return {"message": "Employee deleted", "employee_id": employee_id}
+        else:
+            raise HTTPException(status_code=404, detail="Employee not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Delete employee failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+# =============================================================================
+# Employee Benefits Endpoints
+# =============================================================================
+
+@fastapi_app.post("/benefits")
+async def create_benefits(benefits: BenefitsCreate):
+    """Create or update employee benefits"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        result = DB_MANAGER.add_employee_benefits(
+            employee_id=benefits.employee_id,
+            health_insurance_plan=benefits.health_insurance_plan,
+            health_insurance_provider=benefits.health_insurance_provider,
+            health_insurance_premium=benefits.health_insurance_premium,
+            health_insurance_coverage_type=benefits.health_insurance_coverage_type,
+            life_insurance_status=benefits.life_insurance_status,
+            life_insurance_amount=benefits.life_insurance_amount,
+            life_insurance_provider=benefits.life_insurance_provider,
+            life_insurance_premium=benefits.life_insurance_premium,
+            life_insurance_beneficiary=benefits.life_insurance_beneficiary,
+            k401_enrolled=benefits.k401_enrolled,
+            k401_contribution_percentage=benefits.k401_contribution_percentage,
+            k401_employer_match_percentage=benefits.k401_employer_match_percentage
+        )
+        if result:
+            # Record enrollment history
+            DB_MANAGER.record_benefits_enrollment_history(
+                employee_id=benefits.employee_id,
+                benefit_type="all",
+                action="enroll",
+                new_value="benefits enrolled"
+            )
+            return {"message": "Benefits created", "employee_id": benefits.employee_id}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to create benefits")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Create benefits failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/benefits/{employee_id}")
+async def get_employee_benefits(employee_id: str):
+    """Get employee benefits"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        benefits = DB_MANAGER.get_employee_benefits(employee_id)
+        if benefits:
+            return {"benefits": benefits}
+        else:
+            raise HTTPException(status_code=404, detail="Benefits not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Get benefits failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/benefits")
+async def list_all_benefits(k401_enrolled: Optional[bool] = None):
+    """List all employee benefits"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        benefits_list = DB_MANAGER.get_all_employees_benefits(k401_enrolled)
+        return {"benefits": benefits_list, "count": len(benefits_list)}
+    except Exception as e:
+        logger.error("List benefits failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+# =============================================================================
+# Payroll Endpoints
+# =============================================================================
+
+@fastapi_app.post("/payroll/process")
+async def process_payroll(payroll_request: PayrollProcess):
+    """Process payroll for an employee"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        import uuid
+        payroll_id = f"PYR-{uuid.uuid4().hex[:8].upper()}"
+
+        result = DB_MANAGER.process_payroll(
+            payroll_id=payroll_id,
+            employee_id=payroll_request.employee_id,
+            pay_period_start=payroll_request.pay_period_start,
+            pay_period_end=payroll_request.pay_period_end,
+            pay_date=payroll_request.pay_date,
+            base_salary=payroll_request.base_salary,
+            overtime_pay=payroll_request.overtime_pay,
+            bonuses=payroll_request.bonuses,
+            commissions=payroll_request.commissions,
+            federal_tax_rate=payroll_request.federal_tax_rate,
+            state_tax_rate=payroll_request.state_tax_rate,
+            social_security_rate=payroll_request.social_security_rate,
+            medicare_rate=payroll_request.medicare_rate,
+            health_insurance_premium=payroll_request.health_insurance_premium,
+            life_insurance_premium=payroll_request.life_insurance_premium,
+            k401_contribution=payroll_request.k401_contribution,
+            other_deductions=payroll_request.other_deductions,
+            payment_method=payroll_request.payment_method
+        )
+        if result:
+            return {"message": "Payroll processed", "payroll": result}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to process payroll")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Process payroll failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/payroll/{employee_id}")
+async def get_employee_payroll(employee_id: str, limit: int = 12):
+    """Get payroll history for an employee"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        payroll_records = DB_MANAGER.get_payroll(employee_id, limit)
+        return {"payroll": payroll_records, "count": len(payroll_records)}
+    except Exception as e:
+        logger.error("Get payroll failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+@fastapi_app.get("/payroll")
+async def list_all_payroll(status: Optional[str] = None, limit: int = 100):
+    """List all payroll records"""
+    if not DB_MANAGER:
+        raise HTTPException(status_code=503, detail="Database manager not available")
+
+    try:
+        payroll_records = DB_MANAGER.get_all_payroll(status, limit)
+        return {"payroll": payroll_records, "count": len(payroll_records)}
+    except Exception as e:
+        logger.error("List payroll failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 if __name__ == "__main__":

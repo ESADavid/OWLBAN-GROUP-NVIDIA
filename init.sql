@@ -116,6 +116,101 @@ INSERT INTO system_metrics (metric_name, value, tags, source) VALUES
 ('api_response_time', 0.023, '{"endpoint": "/inference"}', 'api_server')
 ON CONFLICT DO NOTHING;
 
+-- =============================================================================
+-- Employee Benefits and Payroll Management Tables
+-- =============================================================================
+
+-- Employees table
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) UNIQUE NOT NULL,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(50),
+    position VARCHAR(255),
+    department VARCHAR(255),
+    salary DECIMAL(12, 2),
+    hire_date DATE,
+    employment_status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Employee Benefits table
+CREATE TABLE IF NOT EXISTS employee_benefits (
+    id SERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) UNIQUE NOT NULL REFERENCES employees(employee_id),
+    health_insurance_plan VARCHAR(100),
+    health_insurance_provider VARCHAR(255),
+    health_insurance_start_date DATE,
+    health_insurance_premium DECIMAL(10, 2),
+    health_insurance_coverage_type VARCHAR(50),
+    life_insurance_status VARCHAR(50) DEFAULT 'not_enrolled',
+    life_insurance_amount DECIMAL(12, 2),
+    life_insurance_provider VARCHAR(255),
+    life_insurance_premium DECIMAL(10, 2),
+    life_insurance_beneficiary VARCHAR(255),
+    k401_enrolled BOOLEAN DEFAULT FALSE,
+    k401_contribution_percentage DECIMAL(5, 2),
+    k401_employer_match_percentage DECIMAL(5, 2),
+    k401_start_date DATE,
+    k401_current_balance DECIMAL(14, 2),
+    benefits_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Payroll table
+CREATE TABLE IF NOT EXISTS payroll (
+    id SERIAL PRIMARY KEY,
+    payroll_id VARCHAR(50) UNIQUE NOT NULL,
+    employee_id VARCHAR(50) REFERENCES employees(employee_id),
+    pay_period_start DATE NOT NULL,
+    pay_period_end DATE NOT NULL,
+    pay_date DATE NOT NULL,
+    base_salary DECIMAL(12, 2),
+    overtime_pay DECIMAL(10, 2),
+    bonuses DECIMAL(10, 2),
+    commissions DECIMAL(10, 2),
+    federal_tax_withholding DECIMAL(10, 2),
+    state_tax_withholding DECIMAL(10, 2),
+    social_security_tax DECIMAL(10, 2),
+    medicare_tax DECIMAL(10, 2),
+    health_insurance_premium DECIMAL(10, 2),
+    life_insurance_premium DECIMAL(10, 2),
+    k401_contribution DECIMAL(10, 2),
+    other_deductions DECIMAL(10, 2),
+    gross_pay DECIMAL(12, 2),
+    net_pay DECIMAL(12, 2),
+    payment_status VARCHAR(50) DEFAULT 'pending',
+    payment_method VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Employee Benefits Enrollment History
+CREATE TABLE IF NOT EXISTS benefits_enrollment_history (
+    id SERIAL PRIMARY KEY,
+    employee_id VARCHAR(50) REFERENCES employees(employee_id),
+    benefit_type VARCHAR(100) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    previous_value TEXT,
+    new_value TEXT,
+    effective_date DATE,
+    performed_by VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for employee benefits and payroll
+CREATE INDEX IF NOT EXISTS idx_employees_employee_id ON employees(employee_id);
+CREATE INDEX IF NOT EXISTS idx_employees_department ON employees(department);
+CREATE INDEX IF NOT EXISTS idx_employees_status ON employees(employment_status);
+CREATE INDEX IF NOT EXISTS idx_employee_benefits_employee_id ON employee_benefits(employee_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_employee_id ON payroll(employee_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_pay_period ON payroll(pay_period_start, pay_period_end);
+CREATE INDEX IF NOT EXISTS idx_payroll_payment_status ON payroll(payment_status);
+CREATE INDEX IF NOT EXISTS idx_benefits_enrollment_employee_id ON benefits_enrollment_history(employee_id);
+
 -- Create user and grant permissions (if needed)
 -- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO owlban;
 -- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO owlban;
