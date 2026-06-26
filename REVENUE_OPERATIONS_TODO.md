@@ -37,18 +37,21 @@ Execute revenue optimization and verify all integrations are working properly wi
 ## Solutions for PyTorch
 
 ### Option 1: Fix Windows DLLs
+
 ```bash
 # Install Visual C++ Redistributables
 # Download from Microsoft
 ```
 
 ### Option 2: Use Linux/WSL
+
 ```bash
 # Install on Ubuntu/WSL
 pip install torch torchvision torchaudio
 ```
 
 ### Option 3: Use Docker
+
 ```bash
 # Use the provided Dockerfile
 docker build -f Dockerfile.api -t owlban-api .
