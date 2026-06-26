@@ -37,7 +37,7 @@ class DatabaseManager:
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
         if MONGODB_AVAILABLE:
             self._init_mongodb()
@@ -300,7 +300,7 @@ class DatabaseManager:
         except Exception as e:
             self.logger.error(f"Redis initialization failed: {e}")
 
-    # SQLite operations
+# SQLite operations
     def save_prediction_sqlite(self, model_name: str, input_data: Dict, prediction: Any, confidence: float):
         """Save prediction to SQLite"""
         if "sqlite" not in self.connections:
@@ -507,10 +507,10 @@ class DatabaseManager:
     # Employee Management Methods
     # =============================================================================
 
-    def add_employee(self, employee_id: str, first_name: str, last_name: str, email: str,
-                     phone: Optional[str] = None, position: Optional[str] = None,
-                     department: Optional[str] = None, salary: Optional[float] = None,
-                     hire_date: Optional[str] = None) -> bool:
+def add_employee(self, employee_id: str, first_name: str, last_name: str, email: str,
+                  phone: Optional[str] = None, position: Optional[str] = None,
+                  department: Optional[str] = None, salary: Optional[float] = None,
+                  hire_date: Optional[str] = None) -> bool:
         """Add a new employee to the database"""
         if "sqlite" not in self.connections:
             return False
@@ -518,9 +518,9 @@ class DatabaseManager:
         try:
             cursor = self.connections["sqlite"].cursor()
             cursor.execute(
-                """INSERT INTO employees (employee_id, first_name, last_name, email, phone, position, department, salary, hire_date)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (employee_id, first_name, last_name, email, phone, position, department, salary, hire_date)
+                """INSERT INTO employees (employee_id, first_name, last_name, email, phone, position, department, salary, hire_date, employment_status)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (employee_id, first_name, last_name, email, phone, position, department, salary, hire_date, 'active')
             )
             self.connections["sqlite"].commit()
             return True
@@ -619,7 +619,7 @@ class DatabaseManager:
                              life_insurance_amount: Optional[float] = None,
                              life_insurance_provider: Optional[str] = None,
                              life_insurance_premium: Optional[float] = None,
-                             life_insurance_beneficiary: Optional[str] = None,
+life_insurance_beneficiary: Optional[str] = None,
                              k401_enrolled: bool = False,
                              k401_contribution_percentage: Optional[float] = None,
                              k401_employer_match_percentage: Optional[float] = None) -> bool:
@@ -634,8 +634,8 @@ class DatabaseManager:
                    (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                     health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                     life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                    k401_employer_match_percentage)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                  health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                  life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
@@ -777,7 +777,7 @@ class DatabaseManager:
                     overtime_pay, bonuses, commissions, federal_tax_withholding, state_tax_withholding,
                     social_security_tax, medicare_tax, health_insurance_premium, life_insurance_premium,
                     k401_contribution, other_deductions, gross_pay, net_pay, payment_status, payment_method)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
                 (payroll_id, employee_id, pay_period_start, pay_period_end, pay_date, base_salary,
                  overtime_pay, bonuses, commissions, federal_tax_withholding, state_tax_withholding,
                  social_security_tax, medicare_tax, health_insurance_premium, life_insurance_premium,
