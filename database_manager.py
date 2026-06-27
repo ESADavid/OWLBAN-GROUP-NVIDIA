@@ -616,7 +616,7 @@ class DatabaseManager:
                              health_insurance_premium: Optional[float] = None,
                              health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
-                             life_insurance_amount: Optional[float] = None,
+life_insurance_amount: Optional[float] = None,
                              life_insurance_provider: Optional[str] = None,
                              life_insurance_premium: Optional[float] = None,
                              life_insurance_beneficiary: Optional[str] = None,

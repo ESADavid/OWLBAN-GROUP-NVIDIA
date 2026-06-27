@@ -35,9 +35,9 @@ class DatabaseManager:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.logger = logging.getLogger("DatabaseManager")
         self.config = config or self._default_config()
-        self.connections: Dict[str, Any] = {}
+self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
         if MONGODB_AVAILABLE:
             self._init_mongodb()
@@ -77,8 +77,8 @@ class DatabaseManager:
             self.connections["sqlite"] = sqlite3.connect(db_path)
             self._create_sqlite_tables()
             self.logger.info("SQLite database initialized")
-        except Exception as e:
-            self.logger.error(f"SQLite initialization failed: {e}")
+        except sqlite3.Error as e:
+            self.logger.error("SQLite initialization failed: %s", e)
 
     def _create_sqlite_tables(self):
         """Create necessary SQLite tables"""
@@ -614,7 +614,7 @@ class DatabaseManager:
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
                              health_insurance_provider: Optional[str] = None,
                              health_insurance_premium: Optional[float] = None,
-                             health_insurance_coverage_type: Optional[str] = None,
+health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
                              life_insurance_amount: Optional[float] = None,
                              life_insurance_provider: Optional[str] = None,
@@ -634,8 +634,8 @@ class DatabaseManager:
                    (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                     health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                     life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                    k401_employer_match_percentage)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                  health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                  life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
