@@ -1,0 +1,5 @@
+DB Status: {'sqlite': {'connected': True, 'predictions_count': 0}, 'mongodb': {'connected': False, 'error': "localhost:27017: [WinError 10061] No connection could be made because the target machine actively refused it (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms), Timeout: 30s, Topology Description: <TopologyDescription id: 6a3f538e1fc3d84e94e7e3cd, topology_type: Unknown, servers: [<ServerDescription ('localhost', 27017) server_type: Unknown, rtt: None, error=AutoReconnect('localhost:27017: [WinError 10061] No connection could be made because the target machine actively refused it (configured timeouts: socketTimeoutMS: 20000.0ms, connectTimeoutMS: 20000.0ms)')>]>"}, 'redis': {'connected': False, 'error': 'Error 10061 connecting to localhost:6379. No connection could be made because the target machine actively refused it.'}}
+Profit: 142.0000000000001
+Sharpe: 0.26323630979407237
+VaR: -0.03802940840788173
+SUCCESS

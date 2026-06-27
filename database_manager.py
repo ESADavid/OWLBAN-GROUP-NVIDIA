@@ -634,8 +634,8 @@ class DatabaseManager:
                    (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                     health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                     life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                    k401_employer_match_percentage)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                  health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                  life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
