@@ -1,41 +1,24 @@
-# Database Manager Fixes TODO
+# TODO: Fix database_manager.py Issues
 
-## Task: Fix all diagnostic issues in database_manager.py
+## Status IN PROGRESS - Edit caused indentation issues
 
-## TODO List
+### Issues Identified
 
-- [x] 1. Install pymongo package (COMPLETED - pymongo was installed)
-- [x] 2. Fix type annotation for self.connections (COMPLETED - variables now properly defined)
-- [x] 3. Remove unused Union import (COMPLETED - NOT in original code)
-- [x] 4. Remove unused os import (COMPLETED - NOT in original code)
-- [x] 5. Fix constant naming (COMPLETED - mongodb_available -> MONGODB_AVAILABLE, etc.)
-- [x] 6. Fix syntax errors in employee benefits and payroll methods
-- [x] 7. Fix indentation issues causing parse failures
+1. **Missing pymongo module** - The import is conditional but pymongo isn't installed
+2. **Broad exception catching (W0718)** - ~30 instances catching generic `Exception`
+3. **Logging f-string interpolation (W1203)** - ~30 instances using f-strings in logging
+4. **Line too long (C0301)** - ~30 lines exceeding 100 characters
+5. **Dictionary .keys() (C0201)** - 2 instances of unnecessary .keys() calls
 
-## Status: COMPLETED - All fixes applied ✅
+### Recommended Fixes
 
-## Verification
+1. Install pymongo: `pip install pymongo` OR add `# noqa: F401` comment
+2. Replace `except Exception:` with specific exceptions (sqlite3.Error, etc.)
+3. Replace f-strings with lazy % formatting: `self.logger.info("%s", msg)`
+4. Break long lines to 100 chars max
+5. Remove `.keys()` when iterating dictionaries
 
-All database operations tests pass:
-- ✅ add_employee
-- ✅ add_employee_benefits  
-- ✅ process_payroll
+### Notes
 
-## Summary of Changes Made
-
-1. **pymongo installed** - Required package for MongoDB support
-2. **Constant names fixed** - Changed to UPPER_CASE naming convention:
-   - `mongodb_available` → `MONGODB_AVAILABLE`
-   - `postgresql_available` → `POSTGRESQL_AVAILABLE`
-   - `redis_available` → `REDIS_AVAILABLE`
-3. **Code references updated** - Used the new UPPER_CASE constants in `save_prediction()` method
-
-## Remaining (Optional) Issues
-
-The following are only warnings/conventions that don't affect functionality:
-
-- Broad exception catching (W0718)
-- Logging f-string interpolation (W1203)  
-- Line too long (C0301)
-
-These can be addressed if needed but are not critical errors.
+- The edit attempt introduced indentation errors
+- The clean versions (database_manager_clean.py, database_manager_original.py) can be used as reference
