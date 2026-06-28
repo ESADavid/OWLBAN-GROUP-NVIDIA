@@ -18,6 +18,12 @@ except ImportError:
     MONGODB_AVAILABLE = False
 
 try:
+    import pymysql
+    PYMYSQL_AVAILABLE = True
+except ImportError:
+    PYMYSQL_AVAILABLE = False
+
+try:
     import psycopg2
     POSTGRESQL_AVAILABLE = True
 except ImportError:
@@ -31,13 +37,13 @@ except ImportError:
 
 class DatabaseManager:
     """Unified database manager supporting multiple database types"""
-
+    
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.logger = logging.getLogger("DatabaseManager")
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
         if MONGODB_AVAILABLE:
             self._init_mongodb()
@@ -67,8 +73,8 @@ class DatabaseManager:
                 "host": "localhost",
                 "port": 6379,
                 "db": 0
-            }
-        }
+}
+}
 
     def _init_sqlite(self):
         """Initialize SQLite database"""
@@ -77,8 +83,8 @@ class DatabaseManager:
             self.connections["sqlite"] = sqlite3.connect(db_path)
             self._create_sqlite_tables()
             self.logger.info("SQLite database initialized")
-        except Exception as e:
-            self.logger.error(f"SQLite initialization failed: {e}")
+        except sqlite3.Error as e:
+            self.logger.error("SQLite initialization failed: %s", e)
 
     def _create_sqlite_tables(self):
         """Create necessary SQLite tables"""
@@ -613,6 +619,7 @@ class DatabaseManager:
 
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
                              health_insurance_provider: Optional[str] = None,
+                             health_insurance_start_date: Optional[str] = None,
                              health_insurance_premium: Optional[float] = None,
                              health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
@@ -622,7 +629,10 @@ class DatabaseManager:
                              life_insurance_beneficiary: Optional[str] = None,
                              k401_enrolled: bool = False,
                              k401_contribution_percentage: Optional[float] = None,
-                             k401_employer_match_percentage: Optional[float] = None) -> bool:
+                             k401_employer_match_percentage: Optional[float] = None,
+                             k401_start_date: Optional[str] = None,
+                             k401_current_balance: Optional[float] = None,
+                             benefits_notes: Optional[str] = None) -> bool:
         """Add or update employee benefits"""
         if "sqlite" not in self.connections:
             return False
@@ -631,15 +641,17 @@ class DatabaseManager:
             cursor = self.connections["sqlite"].cursor()
             cursor.execute(
                 """INSERT OR REPLACE INTO employee_benefits 
-                   (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                    health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                    life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                 health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                 life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
-                 k401_contribution_percentage, k401_employer_match_percentage)
+                   (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_start_date,
+                    health_insurance_premium, health_insurance_coverage_type, life_insurance_status, life_insurance_amount,
+                    life_insurance_provider, life_insurance_premium, life_insurance_beneficiary, k401_enrolled,
+                    k401_contribution_percentage, k401_employer_match_percentage, k401_start_date,
+                    k401_current_balance, benefits_notes, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_start_date,
+                 health_insurance_premium, health_insurance_coverage_type, life_insurance_status, life_insurance_amount,
+                 life_insurance_provider, life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
+                 k401_contribution_percentage, k401_employer_match_percentage, k401_start_date,
+                 k401_current_balance, benefits_notes)
             )
             self.connections["sqlite"].commit()
             return True

@@ -4,10 +4,17 @@ OWLBAN GROUP - Quantum Annealing for Portfolio Optimization
 """
 
 import numpy as np
-import torch
 import logging
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+
+# Optional PyTorch for GPU acceleration
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
 
 @dataclass
 class PortfolioAsset:
@@ -35,7 +42,11 @@ class QuantumPortfolioOptimizer:
 
     def __init__(self, risk_free_rate: float = 0.02, use_gpu: bool = True):
         self.risk_free_rate = risk_free_rate
-        self.device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+        # Handle torch availability
+        if TORCH_AVAILABLE:
+            self.device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+        else:
+            self.device = "cpu"  # NumPy fallback
         self.logger = logging.getLogger("QuantumPortfolioOptimizer")
         self.assets: List[PortfolioAsset] = []
         self.covariance_matrix: Optional[np.ndarray] = None

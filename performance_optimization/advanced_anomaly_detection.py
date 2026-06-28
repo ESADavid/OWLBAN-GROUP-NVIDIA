@@ -19,19 +19,21 @@ except ImportError:
     trt = None
     tensorrt_available = False
 
+
 class OptimizedAutoencoder(nn.Module):
     """NVIDIA-optimized Autoencoder with cuDNN acceleration for anomaly detection"""
+
     def __init__(self, input_size, hidden_size=64):
         super(OptimizedAutoencoder, self).__init__()
         self.encoder = nn.Sequential(
             nn.Linear(input_size, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(hidden_size, hidden_size//2),
+            nn.Linear(hidden_size, hidden_size // 2),
             nn.ReLU()
         )
         self.decoder = nn.Sequential(
-            nn.Linear(hidden_size//2, hidden_size),
+            nn.Linear(hidden_size // 2, hidden_size),
             nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(hidden_size, input_size)
@@ -41,6 +43,7 @@ class OptimizedAutoencoder(nn.Module):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
         return decoded
+
 
 class AdvancedAnomalyDetection:
     def __init__(self, model=None, use_gpu=True):
@@ -110,7 +113,8 @@ class AdvancedAnomalyDetection:
         threshold = self._calculate_dynamic_threshold(processed_data)
 
         is_anomaly = reconstruction_error > threshold
-        self.logger.debug("NVIDIA GPU anomaly detection: error=%.4f, threshold=%.4f, anomaly=%s", reconstruction_error, threshold, is_anomaly)
+        self.logger.debug("NVIDIA GPU anomaly detection: error=%.4f, threshold=%.4f, anomaly=%s",
+                          reconstruction_error, threshold, is_anomaly)
 
         return is_anomaly, reconstruction_error
 
@@ -129,9 +133,27 @@ class AdvancedAnomalyDetection:
 
     def get_gpu_status(self):
         """Get NVIDIA GPU status for anomaly detection"""
-        return {
+        status = {
             "device": str(self.device),
             "cuda_available": torch.cuda.is_available(),
             "model_parameters": sum(p.numel() for p in self.model.parameters()),
             "input_size": self.input_size
         }
+
+        # Add memory information if CUDA is available
+        if torch.cuda.is_available():
+            try:
+                status["memory_allocated"] = torch.cuda.memory_allocated(0) / 1024**3  # GB
+                status["memory_reserved"] = torch.cuda.memory_reserved(0) / 1024**3   # GB
+                status["memory_total"] = torch.cuda.get_device_properties(0).total_memory / 1024**3  # GB
+            except Exception:
+                status["memory_allocated"] = 0.0
+                status["memory_reserved"] = 0.0
+                status["memory_total"] = 0.0
+        else:
+            # CPU mode - no GPU memory
+            status["memory_allocated"] = 0.0
+            status["memory_reserved"] = 0.0
+            status["memory_total"] = 0.0
+
+        return status

@@ -4,11 +4,19 @@ OWLBAN GROUP - Quantum Monte Carlo for Advanced Risk Assessment
 """
 
 import numpy as np
-import torch
-import torch.nn as nn
 import logging
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+
+# Optional PyTorch for GPU acceleration
+try:
+    import torch
+    import torch.nn as nn
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    nn = None
+    TORCH_AVAILABLE = False
 
 @dataclass
 class RiskFactor:
@@ -28,21 +36,30 @@ class QuantumRiskResult:
     quantum_advantage: float
     confidence_level: float = 0.95
 
-class QuantumNeuralNetwork(nn.Module):
-    """Quantum-inspired neural network for risk modeling"""
+# Only define neural network class if torch is available
+if TORCH_AVAILABLE:
+    class QuantumNeuralNetwork(nn.Module):
+        """Quantum-inspired neural network for risk modeling"""
 
-    def __init__(self, input_size: int, hidden_size: int = 64):
-        super(QuantumNeuralNetwork, self).__init__()
-        self.quantum_layer = nn.Sequential(
-            nn.Linear(input_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Linear(hidden_size, 1)
-        )
+        def __init__(self, input_size: int, hidden_size: int = 64):
+            super(QuantumNeuralNetwork, self).__init__()
+            self.quantum_layer = nn.Sequential(
+                nn.Linear(input_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, hidden_size),
+                nn.ReLU(),
+                nn.Linear(hidden_size, 1)
+            )
 
-    def forward(self, x):
-        return self.quantum_layer(x)
+        def forward(self, x):
+            return self.quantum_layer(x)
+else:
+    # Dummy class when torch not available
+    class QuantumNeuralNetwork:
+        def __init__(self, input_size: int, hidden_size: int = 64):
+            pass
+        def forward(self, x):
+            return x
 
 class QuantumRiskAnalyzer:
     """
@@ -52,10 +69,15 @@ class QuantumRiskAnalyzer:
 
     def __init__(self, confidence_level: float = 0.95, use_gpu: bool = True):
         self.confidence_level = confidence_level
-        self.device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+        # Handle torch availability
+        if TORCH_AVAILABLE:
+            self.device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
+            self.quantum_model = QuantumNeuralNetwork(input_size=10).to(self.device)
+        else:
+            self.device = "cpu"  # NumPy fallback
+            self.quantum_model = None  # No neural network without torch
         self.logger = logging.getLogger("QuantumRiskAnalyzer")
         self.risk_factors: List[RiskFactor] = []
-        self.quantum_model = QuantumNeuralNetwork(input_size=10).to(self.device)  # Initialize with default size
 
         self.logger.info("Initialized Quantum Risk Analyzer on device: %s", self.device)
 
