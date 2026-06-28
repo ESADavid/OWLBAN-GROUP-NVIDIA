@@ -1,24 +1,24 @@
-# TODO: Fix database_manager.py Issues
+# TODO: Fix Pylint/Pylance Issues in database_manager.py
 
-## Status IN PROGRESS - Edit caused indentation issues
+## Status: In Progress
 
-### Issues Identified
+### Issues to Fix:
 
-1. **Missing pymongo module** - The import is conditional but pymongo isn't installed
-2. **Broad exception catching (W0718)** - ~30 instances catching generic `Exception`
-3. **Logging f-string interpolation (W1203)** - ~30 instances using f-strings in logging
-4. **Line too long (C0301)** - ~30 lines exceeding 100 characters
-5. **Dictionary .keys() (C0201)** - 2 instances of unnecessary .keys() calls
+1. **[FIXED]** Unused import pymongo - Remove unused pymongo import 
+2. **[IN PROGRESS]** Broad exception caught (W0718) - Replace broad `except Exception` with more specific exceptions
+3. **[PENDING]** Logging fstring interpolation (W1203) - Convert f-strings to lazy % formatting
+4. **[PENDING]** Line too long (C0301) - Break lines exceeding 100 characters
+5. **[PENDING]** Consider iterating dictionary (C0201) - Iterate dict directly instead of .keys()
 
-### Recommended Fixes
+### Progress:
+- [x] Remove unused pymongo import
+- [ ] Fix all broad Exception catches 
+- [ ] Fix all logging fstring interpolations
+- [ ] Break all long lines
+- [ ] Fix dictionary iterations
 
-1. Install pymongo: `pip install pymongo` OR add `# noqa: F401` comment
-2. Replace `except Exception:` with specific exceptions (sqlite3.Error, etc.)
-3. Replace f-strings with lazy % formatting: `self.logger.info("%s", msg)`
-4. Break long lines to 100 chars max
-5. Remove `.keys()` when iterating dictionaries
-
-### Notes
-
-- The edit attempt introduced indentation errors
-- The clean versions (database_manager_clean.py, database_manager_original.py) can be used as reference
+### Notes:
+- Total exceptions to fix: ~30 occurrences
+- Total logging issues: ~30 occurrences  
+- Total long lines: ~30 occurrences
+- Total dict iteration issues: 2 occurrences

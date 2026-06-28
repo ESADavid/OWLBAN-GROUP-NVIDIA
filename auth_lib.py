@@ -109,28 +109,28 @@ class AuthManager:
         """Load users and sessions from storage"""
         try:
             if os.path.exists(self.user_store_file):
-                with open(self.user_store_file, 'r') as f:
+                with open(self.user_store_file, 'r', encoding='utf-8') as f:
                     user_data = json.load(f)
                     self.users = {email: User.from_dict(data) for email, data in user_data.items()}
         except Exception as e:
-            logger.error(f"Failed to load user data: {e}")
+            logger.error("Failed to load user data: %s", e)
 
         try:
             if os.path.exists(self.session_store_file):
-                with open(self.session_store_file, 'r') as f:
+                with open(self.session_store_file, 'r', encoding='utf-8') as f:
                     session_data = json.load(f)
                     self.sessions = {sid: Session(**data) for sid, data in session_data.items()}
         except Exception as e:
-            logger.error(f"Failed to load session data: {e}")
+            logger.error("Failed to load session data: %s", e)
 
     def _save_data(self):
         """Save users and sessions to storage"""
         try:
             user_data = {email: user.to_dict() for email, user in self.users.items()}
-            with open(self.user_store_file, 'w') as f:
+            with open(self.user_store_file, 'w', encoding='utf-8') as f:
                 json.dump(user_data, f, indent=2)
         except Exception as e:
-            logger.error(f"Failed to save user data: {e}")
+            logger.error("Failed to save user data: %s", e)
 
         try:
             session_data = {sid: asdict(session) for sid, session in self.sessions.items()}
@@ -139,10 +139,10 @@ class AuthManager:
                 for key in ['created_at', 'expires_at']:
                     if isinstance(data[key], datetime):
                         data[key] = data[key].isoformat()
-            with open(self.session_store_file, 'w') as f:
+            with open(self.session_store_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2)
         except Exception as e:
-            logger.error(f"Failed to save session data: {e}")
+            logger.error("Failed to save session data: %s", e)
 
     def _create_default_admin(self):
         """Create default admin user"""
@@ -162,7 +162,7 @@ class AuthManager:
     def validate_password_policy(self, password: str) -> Tuple[bool, str]:
         """Validate password against policy"""
         if len(password) < self.config.PASSWORD_MIN_LENGTH:
-            return False, f"Password must be at least {self.config.PASSWORD_MIN_LENGTH} characters long"
+            return False, "Password must be at least %d characters long" % self.config.PASSWORD_MIN_LENGTH
 
         if self.config.PASSWORD_REQUIRE_UPPERCASE and not any(c.isupper() for c in password):
             return False, "Password must contain at least one uppercase letter"
@@ -193,10 +193,10 @@ class AuthManager:
             return False, "User already exists"
 
         if role not in self.config.ROLES:
-            return False, f"Invalid role. Must be one of: {', '.join(self.config.ROLES)}"
+            return False, "Invalid role. Must be one of: %s" % ', '.join(self.config.ROLES)
 
         if company not in self.config.COMPANIES:
-            return False, f"Invalid company. Must be one of: {', '.join(self.config.COMPANIES)}"
+            return False, "Invalid company. Must be one of: %s" % ', '.join(self.config.COMPANIES)
 
         # Validate password
         valid, message = self.validate_password_policy(password)
@@ -207,7 +207,7 @@ class AuthManager:
             permissions = ['read']
 
         user = User(
-            id=f"{company.lower()}-{secrets.token_hex(4)}",
+            id="%s-%s" % (company.lower(), secrets.token_hex(4)),
             email=email,
             username=username,
             password_hash=self.hash_password(password),
@@ -218,15 +218,15 @@ class AuthManager:
 
         self.users[email] = user
         self._save_data()
-        logger.info(f"User created: {email}")
+        logger.info("User created: %s", email)
         return True, "User created successfully"
 
-    def authenticate_user(self, email: str, password: str, ip_address: str = None,
-                         user_agent: str = None) -> Tuple[bool, str, Optional[User]]:
+    def authenticate_user(self, email: str, password: str, ip_address: Optional[str] = None,
+                         user_agent: Optional[str] = None) -> Tuple[bool, str, Optional[User]]:
         """Authenticate a user"""
         user = self.users.get(email)
         if not user:
-            logger.warning(f"Login attempt for non-existent user: {email}")
+            logger.warning("Login attempt for non-existent user: %s", email)
             return False, "Invalid credentials", None
 
         # Check if account is locked
@@ -238,9 +238,9 @@ class AuthManager:
             user.login_attempts += 1
             if user.login_attempts >= self.config.MAX_LOGIN_ATTEMPTS:
                 user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=self.config.LOCKOUT_DURATION_MINUTES)
-                logger.warning(f"Account locked for user: {email}")
+                logger.warning("Account locked for user: %s", email)
             self._save_data()
-            logger.warning(f"Invalid password for user: {email}")
+            logger.warning("Invalid password for user: %s", email)
             return False, "Invalid credentials", None
 
         # Reset login attempts on successful login
@@ -249,7 +249,7 @@ class AuthManager:
         user.last_login = datetime.now(timezone.utc)
         self._save_data()
 
-        logger.info(f"Successful login for user: {email}")
+        logger.info("Successful login for user: %s", email)
         return True, "Login successful", user
 
     def generate_tokens(self, user: User) -> Tuple[str, str]:
@@ -308,7 +308,7 @@ class AuthManager:
         except jwt.InvalidTokenError:
             return None
 
-    def create_session(self, user: User, ip_address: str = None, user_agent: str = None) -> str:
+    def create_session(self, user: User, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> str:
         """Create a new session"""
         session_id = secrets.token_urlsafe(32)
         now = datetime.now(timezone.utc)
@@ -328,7 +328,7 @@ class AuthManager:
 
         self.sessions[session_id] = session
         self._save_data()
-        logger.info(f"Session created for user: {user.email}")
+        logger.info("Session created for user: %s", user.email)
         return session_id
 
     def verify_session(self, session_id: str) -> Optional[Session]:
@@ -349,7 +349,7 @@ class AuthManager:
         if session_id in self.sessions:
             self.sessions[session_id].active = False
             self._save_data()
-            logger.info(f"Session destroyed: {session_id}")
+            logger.info("Session destroyed: %s", session_id)
 
     def get_user_by_email(self, email: str) -> Optional[User]:
         """Get user by email"""
@@ -366,7 +366,7 @@ class AuthManager:
                 setattr(user, key, value)
 
         self._save_data()
-        logger.info(f"User updated: {email}")
+        logger.info("User updated: %s", email)
         return True
 
     def delete_user(self, email: str) -> bool:
@@ -374,11 +374,11 @@ class AuthManager:
         if email in self.users:
             del self.users[email]
             self._save_data()
-            logger.info(f"User deleted: {email}")
+            logger.info("User deleted: %s", email)
             return True
         return False
 
-    def list_users(self, company: str = None) -> List[Dict[str, Any]]:
+    def list_users(self, company: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all users, optionally filtered by company"""
         users = []
         for user in self.users.values():
@@ -403,13 +403,13 @@ class AuthManager:
 
         if expired_sessions:
             self._save_data()
-            logger.info(f"Cleaned up {len(expired_sessions)} expired sessions")
+            logger.info("Cleaned up %d expired sessions", len(expired_sessions))
 
 # Global auth manager instance
 auth_manager = AuthManager()
 
 # Convenience functions
-def authenticate_user(email: str, password: str, ip_address: str = None, user_agent: str = None):
+def authenticate_user(email: str, password: str, ip_address: Optional[str] = None, user_agent: Optional[str] = None):
     return auth_manager.authenticate_user(email, password, ip_address, user_agent)
 
 def verify_token(token: str):
@@ -428,20 +428,20 @@ if __name__ == '__main__':
 
     # Create a test user
     success, message = create_user('test@owlban.com', 'testuser', 'TestPass123!', 'user', 'OWLBAN_GROUP')
-    print(f"Create user: {success} - {message}")
+    print("Create user: %s - %s" % (success, message))
 
     # Test authentication
     success, message, user = authenticate_user('test@owlban.com', 'TestPass123!')
-    print(f"Authenticate: {success} - {message}")
+    print("Authenticate: %s - %s" % (success, message))
 
     if user:
         # Generate tokens
         access_token, refresh_token = auth_manager.generate_tokens(user)
-        print(f"Access token: {access_token[:20]}...")
-        print(f"Refresh token: {refresh_token[:20]}...")
+        print("Access token: %s..." % access_token[:20])
+        print("Refresh token: %s..." % refresh_token[:20])
 
         # Verify token
         payload = verify_token(access_token)
-        print(f"Token valid: {payload is not None}")
+        print("Token valid: %s" % (payload is not None))
         if payload:
-            print(f"User from token: {payload['email']}")
+            print("User from token: %s" % payload['email'])

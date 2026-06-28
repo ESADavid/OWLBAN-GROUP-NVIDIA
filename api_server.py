@@ -11,7 +11,7 @@ import uuid
 from typing import Dict, List, Optional, Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
@@ -43,6 +43,20 @@ try:
     DB_MANAGER_AVAILABLE = True
 except ImportError:
     DB_MANAGER_AVAILABLE = False
+
+# Import authentication library
+try:
+    from auth_lib import AuthManager, authenticate_user, create_user, verify_token
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+    # Fallback simple auth functions
+    def authenticate_user(email, password, ip_address=None, user_agent=None):
+        return False, "Auth not available", None
+    def create_user(email, username, password, role='user', company='OWLBAN_GROUP', permissions=None):
+        return False, "Auth not available"
+    def verify_token(token):
+        return None
 
 # Constants
 REVENUE_OPTIMIZER_NOT_AVAILABLE = "Revenue optimizer not available"
@@ -252,6 +266,191 @@ class LogEntry(BaseModel):
     message: str
     timestamp: str
     source: str
+
+# =============================================================================
+# Authentication Models
+# =============================================================================
+
+class UserRegister(BaseModel):
+    email: str
+    username: str
+    password: str
+    role: str = "user"
+    company: str = "OWLBAN_GROUP"
+    permissions: Optional[List[str]] = None
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class AuthResponse(BaseModel):
+    success: bool
+    message: str
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    user: Optional[Dict[str, Any]] = None
+
+class TokenRefresh(BaseModel):
+    refresh_token: str
+
+# =============================================================================
+# Authentication Endpoints
+# =============================================================================
+
+@fastapi_app.post("/auth/register", response_model=AuthResponse)
+async def register_user(user_data: UserRegister):
+    """Register a new user"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    try:
+        success, message = create_user(
+            email=user_data.email,
+            username=user_data.username,
+            password=user_data.password,
+            role=user_data.role,
+            company=user_data.company,
+            permissions=user_data.permissions
+        )
+
+        if success:
+            return AuthResponse(
+                success=True,
+                message=message
+            )
+        else:
+            return AuthResponse(
+                success=False,
+                message=message
+            )
+    except Exception as e:
+        logger.error("Registration failed: %s", e)
+        return AuthResponse(
+            success=False,
+            message=str(e)
+        )
+
+@fastapi_app.post("/auth/login", response_model=AuthResponse)
+async def login_user(login_data: UserLogin):
+    """Authenticate a user and return JWT tokens"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    try:
+        from auth_lib import auth_manager
+
+        success, message, user = authenticate_user(
+            email=login_data.email,
+            password=login_data.password
+        )
+
+        if success and user:
+            # Generate tokens
+            access_token, refresh_token = auth_manager.generate_tokens(user)
+            return AuthResponse(
+                success=True,
+                message=message,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                user={
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username,
+                    "role": user.role,
+                    "company": user.company,
+                    "permissions": user.permissions
+                }
+            )
+        else:
+            return AuthResponse(
+                success=False,
+                message=message
+            )
+    except Exception as e:
+        logger.error("Login failed: %s", e)
+        return AuthResponse(
+            success=False,
+            message=str(e)
+        )
+
+@fastapi_app.post("/auth/logout")
+async def logout_user():
+    """Logout the current user"""
+    # For now, just return success
+    return {"success": True, "message": "Logged out successfully"}
+
+@fastapi_app.post("/auth/refresh", response_model=AuthResponse)
+async def refresh_token_endpoint(token_data: TokenRefresh):
+    """Refresh access token using refresh token"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    try:
+        from auth_lib import auth_manager
+
+        tokens = auth_manager.refresh_access_token(token_data.refresh_token)
+        if tokens:
+            access_token, refresh_token = tokens
+            return AuthResponse(
+                success=True,
+                message="Token refreshed successfully",
+                access_token=access_token,
+                refresh_token=refresh_token
+            )
+        else:
+            return AuthResponse(
+                success=False,
+                message="Invalid refresh token"
+            )
+    except Exception as e:
+        logger.error("Token refresh failed: %s", e)
+        return AuthResponse(
+            success=False,
+            message=str(e)
+        )
+
+@fastapi_app.get("/auth/me")
+async def get_current_user(authorization: Optional[str] = Header(None)):
+    """Get current user info from token"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header"
+        )
+
+    try:
+        # Extract token from "Bearer <token>"
+        token = authorization.replace("Bearer ", "")
+        payload = verify_token(token)
+
+        if payload:
+            return {
+                "success": True,
+                "user": {
+                    "id": payload.get("user_id"),
+                    "email": payload.get("email"),
+                    "username": payload.get("username"),
+                    "role": payload.get("role"),
+                    "company": payload.get("company"),
+                    "permissions": payload.get("permissions")
+                }
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Get current user failed: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication"
+        )
 
 # API endpoints
 @fastapi_app.get("/")
@@ -657,7 +856,6 @@ async def process_payroll(payroll_request: PayrollProcess):
         raise HTTPException(status_code=503, detail="Database manager not available")
 
     try:
-        import uuid
         payroll_id = f"PYR-{uuid.uuid4().hex[:8].upper()}"
 
         result = DB_MANAGER.process_payroll(

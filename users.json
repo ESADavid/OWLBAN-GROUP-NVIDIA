@@ -20,5 +20,42 @@
     "login_attempts": 0,
     "locked_until": null,
     "active": true
+  },
+  "testuser@owlban.com": {
+    "id": "owlban_group-33f5154c",
+    "email": "testuser@owlban.com",
+    "username": "testuser",
+    "password_hash": "$2b$12$XKPJaqvLdtUm9/qas3p0w.YEr3jFeav7T9nUtJjkpoU5yYATVq8iS",
+    "role": "user",
+    "company": "OWLBAN_GROUP",
+    "permissions": [
+      "read",
+      "write"
+    ],
+    "mfa_enabled": false,
+    "mfa_secret": null,
+    "created_at": "2026-06-27T17:34:26.918317+00:00",
+    "last_login": "2026-06-28T02:28:37.378693+00:00",
+    "login_attempts": 0,
+    "locked_until": null,
+    "active": true
+  },
+  "test@owlban.com": {
+    "id": "owlban_group-f1e157d7",
+    "email": "test@owlban.com",
+    "username": "testuser",
+    "password_hash": "$2b$12$HSGThhX9wpmTeNr2rxGeS.R8JqfImjGc0WUhrbI8/9GT8c0sf7pIi",
+    "role": "user",
+    "company": "OWLBAN_GROUP",
+    "permissions": [
+      "read"
+    ],
+    "mfa_enabled": false,
+    "mfa_secret": null,
+    "created_at": "2026-06-27T18:32:56.513830+00:00",
+    "last_login": "2026-06-27T22:05:47.269462+00:00",
+    "login_attempts": 0,
+    "locked_until": null,
+    "active": true
   }
 }
