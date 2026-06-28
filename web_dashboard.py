@@ -13,6 +13,13 @@ import requests
 import json
 from typing import Dict, List, Optional, Any
 
+# Import authentication
+try:
+    from auth_lib import AuthManager, auth_manager
+    auth_available = True
+except ImportError:
+    auth_available = False
+
 # Import AI systems
 try:
     from combined_nim_owlban_ai import CombinedSystem
@@ -73,6 +80,51 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+
+# Initialize session state for authentication
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+if 'user_email' not in st.session_state:
+    st.session_state.user_email = None
+if 'access_token' not in st.session_state:
+    st.session_state.access_token = None
+
+def login_form():
+    """Show login form"""
+    st.markdown("### 🔐 Login to Dashboard")
+    
+    email = st.text_input("Email", key="login_email")
+    password = st.text_input("Password", type="password", key="login_password")
+    
+    if st.button("Login", key="login_button"):
+        if auth_available:
+            from auth_lib import authenticate_user
+            success, message, user = authenticate_user(email, password)
+            if success and user:
+                # Generate tokens
+                from auth_lib import auth_manager
+                access_token, refresh_token = auth_manager.generate_tokens(user)
+                
+                st.session_state.authenticated = True
+                st.session_state.user_email = user.email
+                st.session_state.access_token = access_token
+                st.session_state.refresh_token = refresh_token
+                st.rerun()
+            else:
+                st.error(f"Login failed: {message}")
+        else:
+            st.error("Authentication system not available")
+    
+    st.markdown("---")
+    st.info("Default: admin@owlban.com / Admin2024!")
+
+def logout():
+    """Logout user"""
+    st.session_state.authenticated = False
+    st.session_state.user_email = None
+    st.session_state.access_token = None
+    st.session_state.refresh_token = None
+    st.rerun()
 
 class AIDashboard:
     """OWLBAN GROUP AI Dashboard"""
@@ -369,8 +421,21 @@ class AIDashboard:
 
 def main():
     """Main dashboard function"""
-    dashboard = AIDashboard()
-    dashboard.run()
+    # Check authentication
+    if not st.session_state.authenticated:
+        # Show login form
+        st.markdown('<div class="main-header">🚀 OWLBAN GROUP AI Dashboard</div>', unsafe_allow_html=True)
+        login_form()
+    else:
+        # Show authenticated dashboard with user info
+        st.sidebar.markdown("---")
+        st.sidebar.markdown(f"### 👤 {st.session_state.user_email}")
+        if st.sidebar.button("Logout"):
+            logout()
+        
+        # Run the dashboard
+        dashboard = AIDashboard()
+        dashboard.run()
 
 if __name__ == "__main__":
     main()

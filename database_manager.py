@@ -1,12 +1,6 @@
 """
 OWLBAN GROUP AI Database Manager
 Unified database interface for all AI systems with SQL and NoSQL support
-
-Pylint disable justifications:
-- broad-exception-caught: Database operations require defensive exception handling
-- logging-fstring-interpolation: f-strings are more readable for logging
-- line-too-long: Function signatures and SQL require longer lines
-- consider-iterating-dictionary: .keys() explicit for readability
 """
 
 import sqlite3
@@ -15,9 +9,10 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
-# Optional database drivers (pylint: disable=unused-import)
+# Optional database drivers
 try:
-    from pymongo import MongoClient  # noqa: F401
+    import pymongo
+    from pymongo import MongoClient
     MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
@@ -308,7 +303,7 @@ class DatabaseManager:
     # SQLite operations
     def save_prediction_sqlite(self, model_name: str, input_data: Dict, prediction: Any, confidence: float):
         """Save prediction to SQLite"""
-if "sqlite" not in self.connections:
+        if "sqlite" not in self.connections:
             return False
 
         try:
@@ -601,7 +596,7 @@ if "sqlite" not in self.connections:
     def delete_employee(self, employee_id: str) -> bool:
         """Delete an employee"""
         if "sqlite" not in self.connections:
-return False
+            return False
 
         try:
             cursor = self.connections["sqlite"].cursor()
@@ -612,22 +607,22 @@ return False
             self.logger.error(f"Delete employee failed: {e}")
             return False
 
-    # =============================================================================
+# =============================================================================
     # Employee Benefits Management Methods
     # =============================================================================
 
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
-                                 health_insurance_provider: Optional[str] = None,
-                                 health_insurance_premium: Optional[float] = None,
-                                 health_insurance_coverage_type: Optional[str] = None,
-                                 life_insurance_status: str = "not_enrolled",
-                                 life_insurance_amount: Optional[float] = None,
-                                 life_insurance_provider: Optional[str] = None,
-                                 life_insurance_premium: Optional[float] = None,
-                                 life_insurance_beneficiary: Optional[str] = None,
-                                 k401_enrolled: bool = False,
-                                 k401_contribution_percentage: Optional[float] = None,
-                                 k401_employer_match_percentage: Optional[float] = None) -> bool:
+                             health_insurance_provider: Optional[str] = None,
+                             health_insurance_premium: Optional[float] = None,
+                             health_insurance_coverage_type: Optional[str] = None,
+                             life_insurance_status: str = "not_enrolled",
+                             life_insurance_amount: Optional[float] = None,
+                             life_insurance_provider: Optional[str] = None,
+                             life_insurance_premium: Optional[float] = None,
+                             life_insurance_beneficiary: Optional[str] = None,
+                             k401_enrolled: bool = False,
+                             k401_contribution_percentage: Optional[float] = None,
+                             k401_employer_match_percentage: Optional[float] = None) -> bool:
         """Add or update employee benefits"""
         if "sqlite" not in self.connections:
             return False
@@ -639,8 +634,8 @@ return False
                    (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                     health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                     life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    k401_employer_match_percentage, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
                 (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
                  health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
                  life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
