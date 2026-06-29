@@ -11,40 +11,34 @@ from datetime import datetime
 
 # Optional database drivers - use TYPE_CHECKING to avoid linter errors
 # These imports are optional and will show as unavailable if not installed
-MONGODB_AVAILABLE = False
-POSTGRESQL_AVAILABLE = False
-REDIS_AVAILABLE = False
+mongodb_available = False
+postgresql_available = False
+redis_available = False
 
 # MongoClient type for type hints only (avoids import error when pymongo not installed)
 if TYPE_CHECKING:
-    # This is only for type checking, actual import happens at runtime
-    from pymongo import MongoClient as MongoClientType
-    from pymongo.client import ClientOptions
+    try:
+        from pymongo import MongoClient as MongoClientType
+        from pymongo.client import ClientOptions
+    except ImportError:
+        pass
 
 # Try to import optional database drivers at runtime
 try:
-    import pymongo  # noqa: F401
-    MONGODB_AVAILABLE = True
+    from pymongo import MongoClient  # noqa: F401
+    mongodb_available = True
 except ImportError:
-    pass
-
-if MONGODB_AVAILABLE:
-    try:
-        from pymongo import MongoClient
-    except ImportError:
-        MongoClient = None
-else:
-    MongoClient = None
+    MongoClient = None  # type: ignore
 
 try:
     import psycopg2  # noqa: F401
-    POSTGRESQL_AVAILABLE = True
+    postgresql_available = True
 except ImportError:
     pass
 
 try:
     import redis  # noqa: F401
-    REDIS_AVAILABLE = True
+    redis_available = True
 except ImportError:
     pass
 
@@ -56,13 +50,13 @@ class DatabaseManager:
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-        # Initialize databases
+# Initialize databases
         self._init_sqlite()
-        if MONGODB_AVAILABLE:
+        if mongodb_available:
             self._init_mongodb()
-        if POSTGRESQL_AVAILABLE:
+        if postgresql_available:
             self._init_postgresql()
-        if REDIS_AVAILABLE:
+        if redis_available:
             self._init_redis()
 
     def _default_config(self) -> Dict[str, Any]:
@@ -299,11 +293,11 @@ class DatabaseManager:
             """
         ]
 
-        for table_sql in tables:
+for table_sql in tables:
             try:
                 cursor.execute(table_sql)
             except Exception as e:
-                self.logger.warning(f"Table creation failed: {e}")
+                self.logger.warning("Table creation failed: %s", e)
 
         self.connections["postgresql"].commit()
         cursor.close()
@@ -418,20 +412,20 @@ class DatabaseManager:
             self.logger.error(f"Redis get cached prediction failed: {e}")
             return None
 
-    # Unified interface
+# Unified interface
     def save_prediction(self, model_name: str, input_data: Dict, prediction: Any, confidence: float):
         """Save prediction to all available databases"""
         results = []
 
-# Save to SQLite
+        # Save to SQLite
         results.append(("sqlite", self.save_prediction_sqlite(model_name, input_data, prediction, confidence)))
 
-        # Save to MongoDB if available
-        if MONGODB_AVAILABLE:
+# Save to MongoDB if available
+        if mongodb_available:
             results.append(("mongodb", self.save_prediction_mongodb(model_name, input_data, prediction, confidence)))
 
         # Cache in Redis if available
-        if REDIS_AVAILABLE:
+        if redis_available:
             cache_key = f"prediction:{model_name}:{hash(str(input_data))}"
             cache_data = {
                 "model_name": model_name,

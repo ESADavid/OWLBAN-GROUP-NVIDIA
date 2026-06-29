@@ -264,9 +264,9 @@ def test_unauthorized_access():
 
 def main():
     """Run all OSCAR BROOME auth tests"""
-    print("="*60)
+    print("=" * 60)
     print("OSCAR BROOME AUTHENTICATION FLOW TEST")
-    print("="*60)
+    print("=" * 60)
     print(f"API Base: {API_BASE}")
     print(f"Test Email: {TEST_EMAIL}")
 

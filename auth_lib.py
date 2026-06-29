@@ -3,16 +3,16 @@ Unified Authentication Library for OWLBAN GROUP
 Provides JWT-based authentication, password management, and session handling
 """
 
-import jwt
-import bcrypt
 import secrets
-import hashlib
-from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Any, Tuple
 import logging
 import json
 import os
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass, asdict
+
+import jwt
+import bcrypt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,18 +24,10 @@ class User:
     id: str
     email: str
     username: str
-password_hash: str
+    password_hash: str
     role: str
-    permissions: List[str]
-    mfa_enabled: bool = False
-    mfa_secret: Optional[str] = None
-    created_at: Optional[datetime] = None
-    last_login: Optional[datetime] = None
-    login_attempts: int = 0
-    locked_until: Optional[datetime] = None
-    active: bool = True
     company: str
-permissions: List[str]
+    permissions: List[str]
     mfa_enabled: bool = False
     mfa_secret: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -98,6 +90,7 @@ class AuthConfig:
     COMPANIES = ['OWLBAN_GROUP', 'OSCAR_BROOME', 'BLACKBOX_AI', 'NVIDIA_INTEGRATION']
     ROLES = ['admin', 'user', 'executive', 'developer', 'analyst']
 
+@dataclass
 class PasswordResetToken:
     """Password reset token data structure"""
     token: str

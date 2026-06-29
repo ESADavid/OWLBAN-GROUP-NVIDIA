@@ -45,17 +45,43 @@ except ImportError:
     DB_MANAGER_AVAILABLE = False
 
 # Import authentication library
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from auth_lib import AuthManager
+
 try:
-    from auth_lib import AuthManager, authenticate_user, create_user, verify_token
+    from auth_lib import authenticate_user, create_user, verify_token
+    # Import auth_manager for token generation
+    from auth_lib import auth_manager as _auth_manager
     AUTH_AVAILABLE = True
 except ImportError:
     AUTH_AVAILABLE = False
-    # Fallback simple auth functions
-    def authenticate_user(email, password, ip_address=None, user_agent=None):
-        return False, "Auth not available", None
-    def create_user(email, username, password, role='user', company='OWLBAN_GROUP', permissions=None):
-        return False, "Auth not available"
-    def verify_token(token):
+    _auth_manager: "AuthManager" = None  # type: ignore[assignment]
+    # Fallback simple auth functions with consistent signatures
+    # Only defined when auth_lib is not available to avoid redefinition
+    def authenticate_user(
+        _email: str,
+        _password: str,
+        _ip_address: Optional[str] = None,
+        _user_agent: Optional[str] = None
+    ) -> tuple[bool, str, Optional[dict]]:
+        """Fallback authenticate_user when auth_lib is not available."""
+        return (False, "Auth not available", None)
+
+    def create_user(
+        _email: str,
+        _username: str,
+        _password: str,
+        _role: str = "user",
+        _company: str = "OWLBAN_GROUP",
+        _permissions: Optional[List[str]] = None
+    ) -> tuple[bool, str]:
+        """Fallback create_user when auth_lib is not available."""
+        return (False, "Auth not available")
+
+    def verify_token(_token: str) -> Optional[dict]:
+        """Fallback verify_token when auth_lib is not available."""
         return None
 
 # Constants
@@ -293,13 +319,28 @@ class AuthResponse(BaseModel):
 class TokenRefresh(BaseModel):
     refresh_token: str
 
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetConfirm(BaseModel):
+    email: str
+    reset_token: str
+    new_password: str
+
 # =============================================================================
 # Authentication Endpoints
 # =============================================================================
 
 @fastapi_app.post("/auth/register", response_model=AuthResponse)
 async def register_user(user_data: UserRegister):
-    """Register a new user"""
+    """Register a new user.
+    
+    Args:
+        user_data: User registration data containing email, username, password, etc.
+        
+    Returns:
+        AuthResponse indicating success or failure of registration.
+"""
     if not AUTH_AVAILABLE:
         raise HTTPException(status_code=503, detail="Authentication not available")
 
@@ -310,7 +351,7 @@ async def register_user(user_data: UserRegister):
             password=user_data.password,
             role=user_data.role,
             company=user_data.company,
-            permissions=user_data.permissions
+            permissions=user_data.permissions or []
         )
 
         if success:
@@ -419,7 +460,7 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing authorization header"
-        )
+)
 
     try:
         # Extract token from "Bearer <token>"
@@ -450,6 +491,52 @@ async def get_current_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication"
+        ) from e
+
+@fastapi_app.post("/auth/password-reset/request", response_model=AuthResponse)
+async def request_password_reset(reset_request: PasswordResetRequest):
+    """Request a password reset for a user"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    try:
+        from auth_lib import auth_manager
+
+        success, message = auth_manager.request_password_reset(reset_request.email)
+        return AuthResponse(
+            success=success,
+            message=message
+        )
+    except Exception as e:
+        logger.error("Password reset request failed: %s", e)
+        return AuthResponse(
+            success=False,
+            message=str(e)
+        )
+
+@fastapi_app.post("/auth/password-reset/confirm", response_model=AuthResponse)
+async def confirm_password_reset(reset_confirm: PasswordResetConfirm):
+    """Reset password using a valid reset token"""
+    if not AUTH_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Authentication not available")
+
+    try:
+        from auth_lib import auth_manager
+
+        success, message = auth_manager.reset_password(
+            email=reset_confirm.email,
+            reset_token=reset_confirm.reset_token,
+            new_password=reset_confirm.new_password
+        )
+        return AuthResponse(
+            success=success,
+            message=message
+        )
+    except Exception as e:
+        logger.error("Password reset confirmation failed: %s", e)
+        return AuthResponse(
+            success=False,
+            message=str(e)
         )
 
 # API endpoints
@@ -507,9 +594,12 @@ async def optimize_revenue(request: RevenueOptimizationRequest, background_tasks
         background_tasks.add_task(REVENUE_OPTIMIZER.optimize_revenue, request.iterations)
 
         return {
-            "message": "Revenue optimization started with %d iterations" % request.iterations,
+            "message": f"Revenue optimization started with {request.iterations} iterations",
             "status": "running"
         }
+    except ValueError as e:
+        logger.error("Revenue optimization failed: %s", e)
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error("Revenue optimization failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -705,8 +795,8 @@ async def train_oscar_model(model_type: str = "anomaly"):
         if model_type == "anomaly":
             # Try to train anomaly detection
             try:
-                from performance_optimization.advanced_anomaly_detection import AnomalyDetector
-                detector = AnomalyDetector()
+                from performance_optimization.advanced_anomaly_detection import AdvancedAnomalyDetection
+                _detector = AdvancedAnomalyDetection()
                 # Training would happen here with actual data
                 return {
                     "success": True,
@@ -797,7 +887,7 @@ async def get_oscar_anomaly_status():
     try:
         # Try to get anomaly detector status
         try:
-            from performance_optimization.advanced_anomaly_detection import AnomalyDetector
+            from performance_optimization.advanced_anomaly_detection import AdvancedAnomalyDetection
             return {
                 "success": True,
                 "status": "ready",
@@ -824,7 +914,7 @@ async def get_oscar_anomaly_status():
         return {"success": False, "error": str(e)}
 
 @fastapi_app.post("/oscar/anomaly/detect")
-async def detect_oscar_anomaly(data: Dict[str, Any] = None):
+async def detect_oscar_anomaly(data: Optional[Dict[str, Any]] = None):
     """Run anomaly detection on provided data"""
     try:
         if data is None:
@@ -1053,9 +1143,6 @@ async def save_metric(metric_name: str, value: float, tags: Optional[Dict] = Non
     except Exception as e:
         logger.error("Failed to save metric: %s", e)
         raise HTTPException(status_code=500, detail=str(e)) from e
-
-# Import uuid at the top
-import uuid
 
 # =============================================================================
 # Employee Management Endpoints

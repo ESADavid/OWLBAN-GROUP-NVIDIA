@@ -402,10 +402,10 @@ class DatabaseManager:
         """Save prediction to all available databases"""
         results = []
 
-        # Save to SQLite
+# Save to SQLite
         results.append(("sqlite", self.save_prediction_sqlite(model_name, input_data, prediction, confidence)))
 
-# Save to MongoDB if available
+        # Save to MongoDB if available
         if MONGODB_AVAILABLE:
             results.append(("mongodb", self.save_prediction_mongodb(model_name, input_data, prediction, confidence)))
 

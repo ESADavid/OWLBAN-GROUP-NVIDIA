@@ -107,7 +107,7 @@ class DatabaseManager:
             )
         ''')
 
-        # System metrics
+# System metrics
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -397,12 +397,12 @@ class DatabaseManager:
             self.logger.error(f"Redis get cached prediction failed: {e}")
             return None
 
-    # Unified interface
+# Unified interface
     def save_prediction(self, model_name: str, input_data: Dict, prediction: Any, confidence: float):
         """Save prediction to all available databases"""
         results = []
 
-# Save to SQLite
+        # Save to SQLite
         results.append(("sqlite", self.save_prediction_sqlite(model_name, input_data, prediction, confidence)))
 
         # Save to MongoDB if available
@@ -608,11 +608,12 @@ class DatabaseManager:
             return False
 
 # =============================================================================
-    # Employee Benefits Management Methods
+    # Employee Benefits Management
     # =============================================================================
 
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
                              health_insurance_provider: Optional[str] = None,
+                             health_insurance_start_date: Optional[str] = None,
                              health_insurance_premium: Optional[float] = None,
                              health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
@@ -622,24 +623,39 @@ class DatabaseManager:
                              life_insurance_beneficiary: Optional[str] = None,
                              k401_enrolled: bool = False,
                              k401_contribution_percentage: Optional[float] = None,
-                             k401_employer_match_percentage: Optional[float] = None) -> bool:
+                             k401_employer_match_percentage: Optional[float] = None,
+                             k401_start_date: Optional[str] = None,
+                             k401_current_balance: Optional[float] = None,
+                             benefits_notes: Optional[str] = None) -> bool:
         """Add or update employee benefits"""
         if "sqlite" not in self.connections:
             return False
 
         try:
             cursor = self.connections["sqlite"].cursor()
+            # Insert using INSERT OR REPLACE - table has 20 columns total
+            # Columns: id, employee_id, health_insurance_plan, health_insurance_provider,
+            # health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+            # life_insurance_status, life_insurance_amount, life_insurance_provider,
+            # life_insurance_premium, life_insurance_beneficiary, k401_enrolled,
+            # k401_contribution_percentage, k401_employer_match_percentage,
+            # k401_start_date, k401_current_balance, benefits_notes,
+            # created_at, updated_at
             cursor.execute(
                 """INSERT OR REPLACE INTO employee_benefits 
-                   (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                    health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                    life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                 health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                 life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
-                 k401_contribution_percentage, k401_employer_match_percentage)
+                   (employee_id, health_insurance_plan, health_insurance_provider,
+                    health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type, 
+                    life_insurance_status, life_insurance_amount, life_insurance_provider,
+                    life_insurance_premium, life_insurance_beneficiary,
+                    k401_enrolled, k401_contribution_percentage, k401_employer_match_percentage,
+                    k401_start_date, k401_current_balance, benefits_notes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (employee_id, health_insurance_plan, health_insurance_provider,
+                 health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+                 life_insurance_status, life_insurance_amount, life_insurance_provider,
+                 life_insurance_premium, life_insurance_beneficiary,
+                 1 if k401_enrolled else 0, k401_contribution_percentage, k401_employer_match_percentage,
+                 k401_start_date, k401_current_balance, benefits_notes)
             )
             self.connections["sqlite"].commit()
             return True
