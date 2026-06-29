@@ -81,7 +81,7 @@ class AuthConfig:
     PASSWORD_MIN_LENGTH = int(os.getenv('PASSWORD_MIN_LENGTH', '8'))
     PASSWORD_REQUIRE_UPPERCASE = os.getenv('PASSWORD_REQUIRE_UPPERCASE', 'true').lower() == 'true'
     PASSWORD_REQUIRE_LOWERCASE = os.getenv('PASSWORD_REQUIRE_LOWERCASE', 'true').lower() == 'true'
-    PASSWORD_REQUIRE_NUMBERS = os.getenv('PASSWORD_REQUIRE_NUMBERS', 'true').lower() == 'true'
+PASSWORD_REQUIRE_NUMBERS = os.getenv('PASSWORD_REQUIRE_NUMBERS', 'true').lower() == 'true'
     PASSWORD_REQUIRE_SPECIAL = os.getenv('PASSWORD_REQUIRE_SPECIAL', 'false').lower() == 'true'
 
     MAX_LOGIN_ATTEMPTS = int(os.getenv('MAX_LOGIN_ATTEMPTS', '5'))
@@ -99,6 +99,7 @@ class PasswordResetToken:
     expires_at: datetime
     used: bool = False
 
+@dataclass
 class CSRFToken:
     """CSRF token data structure"""
     token: str
@@ -204,8 +205,8 @@ class AuthManager:
         """Verify a password against its hash"""
         return bcrypt.checkpw(password.encode(), password_hash.encode())
 
-def create_user(self, email: str, username: str, password: str, role: str = 'user',
-                   company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
+    def create_user(self, email: str, username: str, password: str, role: str = 'user',
+                company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
         """Create a new user"""
         if email in self.users:
             return False, "User already exists"
@@ -431,7 +432,7 @@ def create_user(self, email: str, username: str, password: str, role: str = 'use
             logger.info("Password reset requested for non-existent user: %s", email)
             return True, "If the email exists, a reset link will be sent"
 
-        # Generate reset token
+# Generate reset token
         token = secrets.token_urlsafe(32)
         now = datetime.now(timezone.utc)
         
@@ -442,7 +443,7 @@ def create_user(self, email: str, username: str, password: str, role: str = 'use
             expires_at=now + timedelta(hours=1),  # Token expires in 1 hour
             used=False
         )
-
+        
         self.password_reset_tokens[token] = reset_token
         
         # In production, send email here
@@ -458,7 +459,7 @@ def create_user(self, email: str, username: str, password: str, role: str = 'use
         if not valid:
             return False, message
 
-# Find the reset token
+        # Find the reset token
         token_obj = self.password_reset_tokens.get(reset_token)
         if not token_obj:
             logger.warning("Invalid password reset token used")
