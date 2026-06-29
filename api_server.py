@@ -104,6 +104,70 @@ def verify_credentials(credentials: HTTPBasicCredentials = Depends(security)):
         )
     return credentials.username
 
+# =============================================================================
+# Security Middleware
+# =============================================================================
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware for adding security headers to all responses."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        
+        # Add security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+        
+        return response
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware for rate limiting requests."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.request_counts = {}  # ip_address -> count
+        self.window_start = {}     # ip_address -> window start time
+        self.RATE_LIMIT = 100      # requests per window
+        self.WINDOW_SIZE = 60      # seconds
+
+    async def dispatch(self, request, call_next):
+        client_ip = request.client.host
+        
+        # Get current time
+        current_time = time.time()
+        
+        # Initialize or reset window
+        if client_ip not in self.window_start:
+            self.window_start[client_ip] = current_time
+            self.request_counts[client_ip] = 0
+        
+        # Check if window expired
+        if current_time - self.window_start[client_ip] > self.WINDOW_SIZE:
+            self.window_start[client_ip] = current_time
+            self.request_counts[client_ip] = 0
+        
+        # Increment count
+        self.request_counts[client_ip] += 1
+        
+        # Check rate limit
+        if self.request_counts[client_ip] > self.RATE_LIMIT:
+            from fastapi import HTTPException
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded. Please try again later."
+            )
+        
+        response = await call_next(request)
+        response.headers["X-RateLimit-Limit"] = str(self.RATE_LIMIT)
+        response.headers["X-RateLimit-Remaining"] = str(max(0, self.RATE_LIMIT - self.request_counts[client_ip]))
+        
+        return response
+
+
 # Monitoring middleware
 class MonitoringMiddleware(BaseHTTPMiddleware):
     """Middleware for request monitoring and logging."""
@@ -157,8 +221,10 @@ fastapi_app = FastAPI(
     version="1.0.0"
 )
 
-# Add middleware
+# Add middleware (order matters - last added is executed first)
 fastapi_app.add_middleware(MonitoringMiddleware)
+fastapi_app.add_middleware(SecurityHeadersMiddleware)
+fastapi_app.add_middleware(RateLimitMiddleware)
 fastapi_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

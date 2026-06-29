@@ -99,6 +99,13 @@ class PasswordResetToken:
     expires_at: datetime
     used: bool = False
 
+class CSRFToken:
+    """CSRF token data structure"""
+    token: str
+    user_id: str
+    created_at: datetime
+    expires_at: datetime
+
 class AuthManager:
     """Unified authentication manager for all OWLBAN GROUP systems"""
 
@@ -109,6 +116,7 @@ class AuthManager:
         self.users: Dict[str, User] = {}
         self.sessions: Dict[str, Session] = {}
         self.password_reset_tokens: Dict[str, PasswordResetToken] = {}
+        self.csrf_tokens: Dict[str, CSRFToken] = {}
         self._load_data()
 
         # Create default admin user if no users exist
@@ -196,8 +204,8 @@ class AuthManager:
         """Verify a password against its hash"""
         return bcrypt.checkpw(password.encode(), password_hash.encode())
 
-    def create_user(self, email: str, username: str, password: str, role: str = 'user',
-                   company: str = 'OWLBAN_GROUP', permissions: List[str] = None) -> Tuple[bool, str]:
+def create_user(self, email: str, username: str, password: str, role: str = 'user',
+                   company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
         """Create a new user"""
         if email in self.users:
             return False, "User already exists"
@@ -450,7 +458,7 @@ class AuthManager:
         if not valid:
             return False, message
 
-        # Find the reset token
+# Find the reset token
         token_obj = self.password_reset_tokens.get(reset_token)
         if not token_obj:
             logger.warning("Invalid password reset token used")
@@ -503,6 +511,54 @@ class AuthManager:
         if expired_tokens:
             logger.info("Cleaned up %d expired reset tokens", len(expired_tokens))
 
+    def generate_csrf_token(self, user_id: str) -> str:
+        """Generate a CSRF token for a user"""
+        token = secrets.token_urlsafe(32)
+        now = datetime.now(timezone.utc)
+
+        csrf_token_obj = CSRFToken(
+            token=token,
+            user_id=user_id,
+            created_at=now,
+            expires_at=now + timedelta(hours=24)
+        )
+
+        self.csrf_tokens[token] = csrf_token_obj
+        logger.info("CSRF token generated for user: %s", user_id)
+        return token
+
+    def verify_csrf_token(self, token: str, user_id: str) -> bool:
+        """Verify a CSRF token"""
+        token_obj = self.csrf_tokens.get(token)
+        if not token_obj:
+            logger.warning("Invalid CSRF token used")
+            return False
+
+        if datetime.now(timezone.utc) > token_obj.expires_at:
+            logger.warning("Expired CSRF token used")
+            return False
+
+        if token_obj.user_id != user_id:
+            logger.warning("User ID mismatch in CSRF token verification")
+            return False
+
+        return True
+
+    def cleanup_expired_csrf_tokens(self):
+        """Clean up expired CSRF tokens"""
+        now = datetime.now(timezone.utc)
+        expired_tokens = []
+
+        for token, token_obj in self.csrf_tokens.items():
+            if now > token_obj.expires_at:
+                expired_tokens.append(token)
+
+        for token in expired_tokens:
+            del self.csrf_tokens[token]
+
+        if expired_tokens:
+            logger.info("Cleaned up %d expired CSRF tokens", len(expired_tokens))
+
 # Global auth manager instance
 auth_manager = AuthManager()
 
@@ -514,7 +570,7 @@ def verify_token(token: str):
     return auth_manager.verify_access_token(token)
 
 def create_user(email: str, username: str, password: str, role: str = 'user',
-               company: str = 'OWLBAN_GROUP', permissions: List[str] = None):
+               company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None):
     return auth_manager.create_user(email, username, password, role, company, permissions)
 
 def get_user_by_email(email: str):
