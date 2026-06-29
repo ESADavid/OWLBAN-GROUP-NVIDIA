@@ -6,12 +6,12 @@ import os
 import traceback
 import numpy as np
 
-# Add current directory to path
-sys.path.insert(0, os.path.dirname(__file__))
-
 # Top-level imports for optional dependencies
 from performance_optimization.reinforcement_learning_agent import ReinforcementLearningAgent
 from quantum_financial_ai.quantum_risk_analyzer import QuantumRiskAnalyzer, RiskFactor
+
+# Add current directory to path
+sys.path.insert(0, os.path.dirname(__file__))
 
 
 def test_rl_agent():
