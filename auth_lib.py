@@ -90,6 +90,14 @@ class AuthConfig:
     COMPANIES = ['OWLBAN_GROUP', 'OSCAR_BROOME', 'BLACKBOX_AI', 'NVIDIA_INTEGRATION']
     ROLES = ['admin', 'user', 'executive', 'developer', 'analyst']
 
+class PasswordResetToken:
+    """Password reset token data structure"""
+    token: str
+    email: str
+    created_at: datetime
+    expires_at: datetime
+    used: bool = False
+
 class AuthManager:
     """Unified authentication manager for all OWLBAN GROUP systems"""
 
@@ -99,6 +107,7 @@ class AuthManager:
         self.session_store_file = session_store_file
         self.users: Dict[str, User] = {}
         self.sessions: Dict[str, Session] = {}
+        self.password_reset_tokens: Dict[str, PasswordResetToken] = {}
         self._load_data()
 
         # Create default admin user if no users exist
@@ -324,7 +333,7 @@ class AuthManager:
             expires_at=now + timedelta(hours=24),  # Sessions last 24 hours
             ip_address=ip_address,
             user_agent=user_agent
-        )
+)
 
         self.sessions[session_id] = session
         self._save_data()
@@ -404,6 +413,94 @@ class AuthManager:
         if expired_sessions:
             self._save_data()
             logger.info("Cleaned up %d expired sessions", len(expired_sessions))
+
+    def request_password_reset(self, email: str) -> Tuple[bool, str]:
+        """Request a password reset for a user"""
+        user = self.users.get(email)
+        if not user:
+            # Return success even if user doesn't exist (security best practice)
+            logger.info("Password reset requested for non-existent user: %s", email)
+            return True, "If the email exists, a reset link will be sent"
+
+        # Generate reset token
+        token = secrets.token_urlsafe(32)
+        now = datetime.now(timezone.utc)
+        
+        reset_token = PasswordResetToken(
+            token=token,
+            email=email,
+            created_at=now,
+            expires_at=now + timedelta(hours=1),  # Token expires in 1 hour
+            used=False
+        )
+
+        self.password_reset_tokens[token] = reset_token
+        
+        # In production, send email here
+        logger.info("Password reset token generated for user: %s", email)
+        logger.info("Password reset token (dev): %s", token)
+        
+        return True, "If the email exists, a reset link will be sent"
+
+    def reset_password(self, email: str, reset_token: str, new_password: str) -> Tuple[bool, str]:
+        """Reset password using a valid reset token"""
+        # Validate new password
+        valid, message = self.validate_password_policy(new_password)
+        if not valid:
+            return False, message
+
+        # Find the reset token
+        token_obj = self.password_reset_tokens.get(reset_token)
+        if not token_obj:
+            logger.warning("Invalid password reset token used")
+            return False, "Invalid or expired reset token"
+
+        # Check if token is valid
+        if token_obj.used:
+            logger.warning("Used password reset token attempted")
+            return False, "Invalid or expired reset token"
+
+        if datetime.now(timezone.utc) > token_obj.expires_at:
+            logger.warning("Expired password reset token used")
+            return False, "Invalid or expired reset token"
+
+        # Verify email matches
+        if token_obj.email != email:
+            logger.warning("Email mismatch in password reset")
+            return False, "Invalid or expired reset token"
+
+        # Get user and update password
+        user = self.users.get(email)
+        if not user:
+            return False, "User not found"
+
+        user.password_hash = self.hash_password(new_password)
+        user.login_attempts = 0
+        user.locked_until = None
+        
+        # Mark token as used
+        token_obj.used = True
+        del self.password_reset_tokens[reset_token]
+
+        self._save_data()
+        logger.info("Password reset successful for user: %s", email)
+        
+        return True, "Password reset successful"
+
+    def cleanup_expired_reset_tokens(self):
+        """Clean up expired password reset tokens"""
+        now = datetime.now(timezone.utc)
+        expired_tokens = []
+
+        for token, token_obj in self.password_reset_tokens.items():
+            if token_obj.used or now > token_obj.expires_at:
+                expired_tokens.append(token)
+
+        for token in expired_tokens:
+            del self.password_reset_tokens[token]
+
+        if expired_tokens:
+            logger.info("Cleaned up %d expired reset tokens", len(expired_tokens))
 
 # Global auth manager instance
 auth_manager = AuthManager()

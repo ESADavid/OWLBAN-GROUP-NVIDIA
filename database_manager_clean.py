@@ -37,7 +37,7 @@ class DatabaseManager:
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
         if MONGODB_AVAILABLE:
             self._init_mongodb()

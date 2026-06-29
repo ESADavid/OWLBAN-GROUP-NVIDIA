@@ -37,7 +37,7 @@ class DatabaseManager:
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
         if MONGODB_AVAILABLE:
             self._init_mongodb()
@@ -68,7 +68,7 @@ class DatabaseManager:
                 "port": 6379,
                 "db": 0
             }
-        }
+}
 
     def _init_sqlite(self):
         """Initialize SQLite database"""
@@ -77,8 +77,8 @@ class DatabaseManager:
             self.connections["sqlite"] = sqlite3.connect(db_path)
             self._create_sqlite_tables()
             self.logger.info("SQLite database initialized")
-        except Exception as e:
-            self.logger.error(f"SQLite initialization failed: {e}")
+        except sqlite3.Error as e:
+            self.logger.error("SQLite initialization failed: %s", e)
 
     def _create_sqlite_tables(self):
         """Create necessary SQLite tables"""
@@ -402,10 +402,10 @@ class DatabaseManager:
         """Save prediction to all available databases"""
         results = []
 
-        # Save to SQLite
+# Save to SQLite
         results.append(("sqlite", self.save_prediction_sqlite(model_name, input_data, prediction, confidence)))
 
-# Save to MongoDB if available
+        # Save to MongoDB if available
         if MONGODB_AVAILABLE:
             results.append(("mongodb", self.save_prediction_mongodb(model_name, input_data, prediction, confidence)))
 

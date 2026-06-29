@@ -1,26 +1,19 @@
-# TODO: Fix Pylint/Pylance Issues in database_manager.py
+# TODO - Fix database_manager.py Issues
 
-## Status: In Progress
+## Issues Identified from Diagnostics:
+1. [x] Read and analyze database_manager.py
+2. [ ] Fix unused imports (pymongo, pymysql) - add proper usage or suppress false positives
+3. [ ] Fix broad exception catching (W0718) - replace Exception with specific exceptions
+4. [ ] Fix logging style (W1203) - use lazy % formatting
+5. [ ] Fix line too long violations (C0301)
+6. [ ] Fix trailing whitespace (C0303) at line 40
+7. [ ] Fix dictionary iteration (.keys()) at lines 588, 716
+8. [ ] Run tests to verify fixes
 
-### Issues to Fix
-
-1. **[FIXED]** Unused import pymongo - Remove unused pymongo import
-2. **[IN PROGRESS]** Broad exception caught (W0718) - Replace broad `except Exception` with more specific exceptions
-3. **[PENDING]** Logging fstring interpolation (W1203) - Convert f-strings to lazy % formatting
-4. **[PENDING]** Line too long (C0301) - Break lines exceeding 100 characters
-5. **[PENDING]** Consider iterating dictionary (C0201) - Iterate dict directly instead of .keys()
-
-### Progress
-
-- [x] Remove unused pymongo import
-- [ ] Fix all broad Exception catches
-- [ ] Fix all logging fstring interpolations
-- [ ] Break all long lines
-- [ ] Fix dictionary iterations
-
-### Notes
-
-- Total exceptions to fix: ~30 occurrences
-- Total logging issues: ~30 occurrences  
-- Total long lines: ~30 occurrences
-- Total dict iteration issues: 2 occurrences
+## Implementation Progress:
+- [ ] Step 1: Fix imports section
+- [ ] Step 2: Fix exception handlers
+- [ ] Step 3: Fix logging statements
+- [ ] Step 4: Fix line lengths
+- [ ] Step 5: Fix whitespace and dictionary issues
+- [ ] Step 6: Test the fixes
