@@ -7,7 +7,7 @@ This guide provides instructions for installing PyTorch for GPU-accelerated oper
 ## Current Status
 
 | Component | CPU Fallback | GPU Accelerated |
-|-----------|-------------|----------------|
+| ----- | ----- | ----- |
 | RL Agent | ✅ Working | 🔲 Requires PyTorch |
 | Quantum Risk Analyzer | ✅ Working | 🔲 Requires PyTorch |
 | Anomaly Detection | 🔲 TBD | 🔲 Requires PyTorch |
@@ -209,7 +209,7 @@ sudo systemctl restart docker
 ## Performance Comparison
 
 | Mode | RL Training Speed | Risk Analysis Speed |
-|------|-------------------|-------------------|
+| ----- | ----- | ----- |
 | NumPy CPU | ~10 episodes/sec | ~1000 sim/sec |
 | PyTorch CPU | ~50 episodes/sec | ~5000 sim/sec |
 | PyTorch GPU | ~500 episodes/sec | ~50000 sim/sec |

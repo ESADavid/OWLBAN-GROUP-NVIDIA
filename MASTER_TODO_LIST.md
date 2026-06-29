@@ -9,7 +9,7 @@ This is a consolidated master TODO list combining all TODO files in the project.
 ## Status Summary
 
 | Category | File | Status |
-|----------|------|--------|
+| -------- | ---- | ------ |
 | Main Project | TODO.md | 8 Phases (Phase 1-2 Complete) |
 | All Phases | TODO_ALL_PHASES.md | Phases 1-4 Framework Complete |
 | Database Fixes | TODO_DATABASE_FIX.md | ✅ Complete |

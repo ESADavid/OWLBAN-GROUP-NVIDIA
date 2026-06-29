@@ -1,59 +1,61 @@
-# FIX ALL DIAGNOSTICS TODO
+# FIX LINTING DIAGNOSTICS TODO
 
-## Information Gathered
+## Task Summary
 
-Analyzed diagnostics from test_oscar_auth.py and auth_lib.py. Issues identified:
+Fix linting diagnostics across 4 files in the OWLBAN GROUP NVIDIA project.
 
-### test_oscar_auth.py (1 issue)
+---
 
-- Line 85: f-string without interpolation
+## Status: ✅ ALL COMPLETE
 
-### auth_lib.py (50+ issues)
+### 1. Fix reinforcement_learning_agent.py ✅
 
-- Mypy: permissions default None vs list[str] (lines 199, 516)
-- Mypy: PasswordResetToken unexpected keyword args (line 429)
-- Pylint: Unused import hashlib (line 9)
-- Pylint: Broad exception caught (lines 124, 132, 141, 153)
-- Pylint: Redefined outer names (multiple lines)
-- Pylint: Unused arguments ip_address, user_agent (lines 233-234)
-- Pylint: Wrong import order (lines 8-15)
-- Pylint: Missing function docstrings (multiple)
-- Pylint: Line too long (multiple)
-- Pylint: Trailing whitespace (multiple)
-- Pylint: Consider using f-strings (multiple)
+- [x] Remove unused TYPE_CHECKING import
+- [x] No-redef - OptimizedDQNNetwork class (kept single definition pattern)
+- [x] Verify Python syntax
 
-## Plan
+---
 
-### Phase 1: Fix test_oscar_auth.py
+### 2. Fix MASTER_TODO_LIST.md ✅
 
-- [ ] 1. Fix f-string on line 85 (remove f prefix)
+- [x] Fix MD060 table column style - added proper spacing
 
-### Phase 2: Fix auth_lib.py Import Order
+---
 
-- [ ] 2. Reorder imports: standard, then third-party (lines 8-15)
+### 3. Fix PYTORCH_INSTALLATION_GUIDE.md ✅
 
-### Phase 3: Fix Mypy Type Errors
+- [x] Fix MD060 table column style (Current Status table)
+- [x] Fix MD060 table column style (Performance Comparison table)
 
-- [ ] 3. Fix permissions default: None -> []
-- [ ] 4. Fix PasswordResetToken class field order
+---
 
-### Phase 4: Fix Pylint Issues
+### 4. Fix test_cpu_fallback.py ✅
 
-- [ ] 5. Remove unused hashlib import
-- [ ] 6. Add docstrings to functions
-- [ ] 7. Fix long lines (wrap or shorten)
-- [ ] 8. Fix trailing whitespace
-- [ ] 9. Use f-strings consistently
-- [ ] 10. Fix broad exception handling
-- [ ] 11. Fix redefined outer names (rename local vars)
-- [ ] 12. Fix unused arguments (add underscore prefix)
+- [x] Move imports to top-level (fix import-outside-toplevel)
+- [x] Verify Python syntax
 
-## Dependent Files
+---
 
-- test_oscar_auth.py (direct fix)
-- auth_lib.py (direct fix)
+## Files Edited
 
-## Followup Steps
+| File | Issues Fixed | Status |
+| ----- | ----- | ----- |
+| performance_optimization/reinforcement_learning_agent.py | 2 | ✅ Complete |
+| MASTER_TODO_LIST.md | 1 table | ✅ Complete |
+| PYTORCH_INSTALLATION_GUIDE.md | 2 tables | ✅ Complete |
+| test_cpu_fallback.py | 2 imports | ✅ Complete |
 
-- Run pylint and mypy to verify fixes
-- Check for any new warnings introduced
+---
+
+## Verification
+
+All files pass Python syntax check:
+
+```bash
+python -m py_compile <file>
+```
+
+---
+
+**Status:** ✅ ALL COMPLETE
+**Completed:** 2025
