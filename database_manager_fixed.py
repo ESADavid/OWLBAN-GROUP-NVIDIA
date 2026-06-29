@@ -6,28 +6,47 @@ Unified database interface for all AI systems with SQL and NoSQL support
 import sqlite3
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from datetime import datetime
 
-# Optional database drivers
+# Optional database drivers - use TYPE_CHECKING to avoid linter errors
+# These imports are optional and will show as unavailable if not installed
+MONGODB_AVAILABLE = False
+POSTGRESQL_AVAILABLE = False
+REDIS_AVAILABLE = False
+
+# MongoClient type for type hints only (avoids import error when pymongo not installed)
+if TYPE_CHECKING:
+    # This is only for type checking, actual import happens at runtime
+    from pymongo import MongoClient as MongoClientType
+    from pymongo.client import ClientOptions
+
+# Try to import optional database drivers at runtime
 try:
-    import pymongo
-    from pymongo import MongoClient
+    import pymongo  # noqa: F401
     MONGODB_AVAILABLE = True
 except ImportError:
-    MONGODB_AVAILABLE = False
+    pass
+
+if MONGODB_AVAILABLE:
+    try:
+        from pymongo import MongoClient
+    except ImportError:
+        MongoClient = None
+else:
+    MongoClient = None
 
 try:
-    import psycopg2
+    import psycopg2  # noqa: F401
     POSTGRESQL_AVAILABLE = True
 except ImportError:
-    POSTGRESQL_AVAILABLE = False
+    pass
 
 try:
-    import redis
+    import redis  # noqa: F401
     REDIS_AVAILABLE = True
 except ImportError:
-    REDIS_AVAILABLE = False
+    pass
 
 class DatabaseManager:
     """Unified database manager supporting multiple database types"""
@@ -116,9 +135,9 @@ class DatabaseManager:
                 tags TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+''')
 
-# Quantum computations
+        # Quantum computations
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quantum_computations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -217,7 +236,7 @@ class DatabaseManager:
                 performed_by TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+''')
 
         self.connections["sqlite"].commit()
 
@@ -228,19 +247,21 @@ class DatabaseManager:
             client = MongoClient(config["host"], config["port"])
             self.connections["mongodb"] = client[config["database"]]
             self.logger.info("MongoDB connection initialized")
-        except Exception as e:
-            self.logger.error(f"MongoDB initialization failed: {e}")
+        except OSError as e:
+            self.logger.error("MongoDB initialization failed: %s", e)
 
     def _init_postgresql(self):
         """Initialize PostgreSQL connection"""
         try:
             config = self.config["postgresql"]
-            conn_string = f"host={config['host']} port={config['port']} dbname={config['database']} user={config['user']} password={config['password']}"
+            conn_string = "host=%s port=%s dbname=%s user=%s password=%s" % (
+                config['host'], config['port'], config['database'],
+                config['user'], config['password'])
             self.connections["postgresql"] = psycopg2.connect(conn_string)
             self._create_postgresql_tables()
             self.logger.info("PostgreSQL connection initialized")
         except Exception as e:
-            self.logger.error(f"PostgreSQL initialization failed: {e}")
+            self.logger.error("PostgreSQL initialization failed: %s", e)
 
     def _create_postgresql_tables(self):
         """Create PostgreSQL tables if they don't exist"""

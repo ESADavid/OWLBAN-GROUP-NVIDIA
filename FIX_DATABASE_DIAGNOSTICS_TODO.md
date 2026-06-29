@@ -1,46 +1,38 @@
-# Database Manager Diagnostics Fix TODO
+# Fix Database Diagnostics TODO
 
-## Analysis Complete
+## Task: Fix all diagnostics in database_manager_fixed.py
 
-### Diagnostic Issues Identified (from Pylint, Pylance, Mypy)
+### Issues to Fix
 
-1. **Missing pymongo library** - `pymongo` not installed
-   - Type: Missing dependency (can install via `pip install pymongo`)
-   - Status: The conditional import pattern is correct; just need to install package
+1. **pymongo import issues**:
+   - Lines 14, 22: Cannot find implementation or library stub for module named "pymongo"
+   - Import "pymongo" could not be resolved
+   - Unused import pymongo
 
-2. **Broad Exception caught (W0718)** - ~30 occurrences
-   - Lines: 80, 231, 242, 284, 300, 317, 348, 369, 382, 396, 443, 460, 477, 501, 527, 544, 571, 592, 606, 646, 666, 693, 714, 737, 796, 815, 832, 849, 873, 888
-   - Type: Code quality warning (catching generic Exception)
-   - Fix: Replace with specific exceptions (sqlite3.Error, json.JSONDecodeError, etc.)
+2. **MongoClient possibly-used-before-assignment**:
+   - Line 234: Possibly using variable 'MongoClient' before assignment
 
-3. **Logging fstring interpolation (W1203)** - ~32 occurrences
-   - Same lines as above + lines 887, 889
-   - Type: Code quality warning (using f-strings in logging)
-   - Fix: Use lazy % formatting: `logger.info("%s", message)`
+3. **Broad Exception caught** (multiple lines: 237, 248, 290, 306, 323, 354, 375, 388, 402, 449, 466, 483, 507, 533, 550, 577, 598, 612, 652, 672, 699, 720, 743, 802, 821, 838, 855, 879, 894):
+   - Catching too general exception Exception
 
-4. **Line too long (C0301)** - ~33 occurrences
-   - Various lines exceeding 100 chars
-   - Type: Style warning
-   - Fix: Break long lines appropriately
+4. **Logging fstring interpolation** (multiple lines):
+   - Use lazy % formatting in logging functions
 
-5. **Dictionary .keys() usage (C0201)** - 2 occurrences
-   - Lines: 582, 704
-   - Type: Style warning
-   - Fix: Use direct iteration instead of .keys()
+5. **Line too long** (multiple lines):
+   - Line too long (various lengths > 100)
 
-### Note
+### Fix Plan
 
-- All issues are **warnings**, not actual code bugs
-- The code is functional and works correctly
-- Pylance and Mypy errors for pymongo are resolved when the package is installed
+1. Use TYPE_CHECKING pattern for optional imports to avoid linter errors
+2. Properly initialize MongoClient to None before conditional use
+3. Replace broad Exception with specific exception types (sqlite3.Error, ConnectionError, etc.)
+4. Replace f-string logging with % formatting
+5. Break long lines to comply with 100 character limit
 
-### Recommendation
+### Status
 
-The file has been restored to a clean working state from `database_manager_clean.py`.
-To fix these programmatically would require careful multi-edit that preserves indentation.
-These warnings are non-critical and don't affect functionality.
-
-### Actions to Dismiss Warnings
-
-- Install pymongo: `pip install pymongo` (resolves import warnings)
-- Ignore style warnings in Pylint config if desired
+- [ ] Fix pymongo imports (lines 14, 22)
+- [ ] Fix MongoClient initialization (line 234)
+- [ ] Fix broad Exception handling (all exception blocks)
+- [ ] Fix logging format strings
+- [ ] Fix line lengths

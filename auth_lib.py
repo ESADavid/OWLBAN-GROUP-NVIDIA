@@ -24,13 +24,21 @@ class User:
     id: str
     email: str
     username: str
-    password_hash: str
+password_hash: str
     role: str
-    company: str
     permissions: List[str]
     mfa_enabled: bool = False
     mfa_secret: Optional[str] = None
-    created_at: datetime = None
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+    login_attempts: int = 0
+    locked_until: Optional[datetime] = None
+    active: bool = True
+    company: str
+permissions: List[str]
+    mfa_enabled: bool = False
+    mfa_secret: Optional[str] = None
+    created_at: Optional[datetime] = None
     last_login: Optional[datetime] = None
     login_attempts: int = 0
     locked_until: Optional[datetime] = None
