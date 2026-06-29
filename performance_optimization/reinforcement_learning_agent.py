@@ -1,12 +1,26 @@
+"""
+OWLBAN GROUP - Reinforcement Learning Agent
+With CPU (NumPy) and GPU (PyTorch) support
+"""
+
 import random
 import numpy as np
-import torch
-import torch.nn as nn
-import torch.optim as optim
 import logging
 from typing import Dict, List, Optional, Tuple
 
-# NVIDIA-specific imports
+# PyTorch imports - optional, with NumPy fallback
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    nn = None
+    optim = None
+    TORCH_AVAILABLE = False
+
+# NVIDIA-specific imports - optional
 try:
     import cupy as cp
     cupy_available = True
@@ -21,24 +35,116 @@ except ImportError:
     trt = None
     tensorrt_available = False
 
-class OptimizedDQNNetwork(nn.Module):
-    """NVIDIA-optimized Deep Q-Network with cuDNN acceleration"""
-    def __init__(self, state_size, action_size, hidden_size=128):
-        super(OptimizedDQNNetwork, self).__init__()
-        self.layers = nn.Sequential(
-            nn.Linear(state_size, hidden_size),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(hidden_size, hidden_size),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(hidden_size, action_size)
-        )
 
-    def forward(self, x):
-        return self.layers(x)
+# Only define neural network class if torch is available
+if TORCH_AVAILABLE:
+    class OptimizedDQNNetwork(nn.Module):
+        """NVIDIA-optimized Deep Q-Network with cuDNN acceleration"""
+        def __init__(self, state_size, action_size, hidden_size=128):
+            super(OptimizedDQNNetwork, self).__init__()
+            self.layers = nn.Sequential(
+                nn.Linear(state_size, hidden_size),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(hidden_size, hidden_size),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(hidden_size, action_size)
+            )
+
+        def forward(self, x):
+            return self.layers(x)
+else:
+    # Dummy class when torch not available
+    class OptimizedDQNNetwork:
+        def __init__(self, state_size, action_size, hidden_size=128):
+            pass
+
+
+class NumPyQLearningAgent:
+    """
+    NumPy-based Q-Learning agent for CPU fallback
+    """
+    def __init__(self, actions, learning_rate=0.1, discount_factor=0.99, 
+                 epsilon=0.2, epsilon_decay=0.995, epsilon_min=0.01):
+        self.actions = actions
+        self.action_size = len(actions)
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.epsilon = epsilon
+        self.epsilon_decay = epsilon_decay
+        self.epsilon_min = epsilon_min
+        
+        # Q-table for state-action values
+        self.q_table = {}
+        
+    def get_state_key(self, state):
+        """Convert state to discretized string key for Q-table"""
+        if isinstance(state, (np.ndarray, list, tuple)):
+            # Discretize state to reduce table size
+            discretized = tuple(int(s * 10) for s in state)
+            return str(discretized)
+        return str(state)
+    
+    def choose_action(self, state):
+        """Epsilon-greedy action selection"""
+        if random.random() < self.epsilon:
+            return random.choice(self.actions)
+        
+        # Get Q-values for this state
+        state_key = self.get_state_key(state)
+        if state_key not in self.q_table:
+            self.q_table[state_key] = {a: 0.0 for a in self.actions}
+        
+        # Choose best action
+        q_values = self.q_table[state_key]
+        return max(q_values, key=q_values.get)
+    
+    def learn(self, state, action, reward, next_state):
+        """Update Q-value using Q-learning"""
+        state_key = self.get_state_key(state)
+        next_state_key = self.get_state_key(next_state)
+        
+        # Initialize if needed
+        if state_key not in self.q_table:
+            self.q_table[state_key] = {a: 0.0 for a in self.actions}
+        if next_state_key not in self.q_table:
+            self.q_table[next_state_key] = {a: 0.0 for a in self.actions}
+        
+        # Q-learning update
+        current_q = self.q_table[state_key][action]
+        max_next_q = max(self.q_table[next_state_key].values())
+        target = reward + self.discount_factor * max_next_q
+        self.q_table[state_key][action] += self.learning_rate * (target - current_q)
+        
+        # Decay epsilon
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+    
+    def reset_parameters(self, learning_rate=None, discount_factor=None, epsilon=None):
+        """Reset parameters"""
+        if learning_rate is not None:
+            self.learning_rate = learning_rate
+        if discount_factor is not None:
+            self.discount_factor = discount_factor
+        if epsilon is not None:
+            self.epsilon = epsilon
+    
+    def get_gpu_status(self):
+        """Get GPU status"""
+        return {
+            "device": "numpy_cpu",
+            "cuda_available": False,
+            "memory_allocated": 0,
+            "memory_reserved": 0,
+            "q_table_size": len(self.q_table)
+        }
+
 
 class ReinforcementLearningAgent:
+    """
+    Reinforcement Learning agent with both CPU (NumPy) and GPU (PyTorch) support
+    """
     def __init__(self, actions, learning_rate=0.001, discount_factor=0.99, epsilon=0.2,
                  epsilon_decay=0.995, epsilon_min=0.01, use_gpu=True):
         self.actions = actions
@@ -50,26 +156,43 @@ class ReinforcementLearningAgent:
         self.epsilon_min = epsilon_min
 
         self.logger = logging.getLogger("RLAgent")
-        self.device = torch.device("cuda" if torch.cuda.is_available() and use_gpu else "cpu")
-        self.logger.info("NVIDIA GPU-accelerated RL using device: %s", self.device)
+        
+        # Determine device and use appropriate backend
+        self.use_torch = TORCH_AVAILABLE and use_gpu and torch.cuda.is_available()
+        
+        if self.use_torch:
+            # Use PyTorch GPU backend
+            self.device = torch.device("cuda")
+            self.logger.info("NVIDIA GPU-accelerated RL using device: %s", self.device)
+            
+            # Initialize Deep Q-Network for GPU acceleration
+            self.state_size = 10  # Default, will be updated dynamically
+            self.dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
+            self.target_dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
+            self.target_dqn.load_state_dict(self.dqn.state_dict())
 
-        # Initialize traditional Q-table as fallback
-        self.q_table = {}
-
-        # Initialize Deep Q-Network for GPU acceleration
-        self.state_size = 10  # Default, will be updated dynamically
-        self.dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
-        self.target_dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
-        self.target_dqn.load_state_dict(self.dqn.state_dict())
-
-        # Enable cuDNN optimization
-        if torch.cuda.is_available():
+            # Enable cuDNN optimization
             torch.backends.cudnn.benchmark = True
 
-        self.optimizer = optim.Adam(self.dqn.parameters(), lr=learning_rate)
-        self.criterion = nn.MSELoss()
+            self.optimizer = optim.Adam(self.dqn.parameters(), lr=learning_rate)
+            self.criterion = nn.MSELoss()
+            
+        else:
+            # Use NumPy CPU fallback
+            self.device = "numpy_cpu"
+            self.logger.info("Using NumPy CPU-based Q-Learning (PyTorch not available)")
+            
+            # Initialize NumPy Q-Learning agent as fallback
+            self.numpy_agent = NumPyQLearningAgent(
+                actions=actions,
+                learning_rate=0.1,  # Higher LR for tabular learning
+                discount_factor=discount_factor,
+                epsilon=epsilon,
+                epsilon_decay=epsilon_decay,
+                epsilon_min=epsilon_min
+            )
 
-        # Experience replay buffer
+        # Experience replay buffer (for both backends)
         self.memory = []
         self.memory_size = 10000
         self.batch_size = 64
@@ -82,93 +205,73 @@ class ReinforcementLearningAgent:
         if isinstance(state, (np.ndarray, list, tuple)):
             return str(tuple(state))
         return str(state)
-
-    def update_state_size(self, state):
-        """Dynamically update state size based on input"""
-        if isinstance(state, (list, tuple, np.ndarray)):
-            new_size = len(state)
-        else:
-            new_size = 1
-
-        if new_size != self.state_size:
-            self.state_size = new_size
-            self.logger.info("Updating DQN state size to %d", self.state_size)
-            # Reinitialize networks with new state size
-            self.dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
-            self.target_dqn = OptimizedDQNNetwork(self.state_size, self.action_size).to(self.device)
-            self.target_dqn.load_state_dict(self.dqn.state_dict())
-            self.optimizer = optim.Adam(self.dqn.parameters(), lr=self.learning_rate)
-
-    def choose_action(self, state):
-        """Choose action using NVIDIA GPU-accelerated DQN"""
-        # Convert state to numeric if necessary
+    
+    def _convert_state_to_numeric(self, state):
+        """Convert state to numeric list"""
         if isinstance(state, (list, tuple)):
             numeric_state = []
             for s in state:
                 if isinstance(s, (int, float)):
                     numeric_state.append(float(s))
                 elif isinstance(s, str):
-                    numeric_state.append(hash(s) % 1000 / 1000.0)  # Simple hash to float
+                    numeric_state.append(hash(s) % 1000 / 1000.0)
                 elif isinstance(s, bool):
                     numeric_state.append(1.0 if s else 0.0)
                 else:
                     numeric_state.append(0.0)
-            state = numeric_state
+            return numeric_state
+        return state
 
-        self.update_state_size(state)
+    def choose_action(self, state):
+        """Choose action using appropriate backend"""
+        state = self._convert_state_to_numeric(state)
+        
+        if self.use_torch:
+            # PyTorch GPU path
+            if isinstance(state, (list, tuple)):
+                state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+            else:
+                state_tensor = state.unsqueeze(0).to(self.device) if hasattr(state, 'unsqueeze') else state
 
-        # Epsilon-greedy exploration
-        if random.random() < self.epsilon:
-            return random.choice(self.actions)
+            # Epsilon-greedy exploration
+            if random.random() < self.epsilon:
+                return random.choice(self.actions)
 
-        # Convert state to tensor
-        state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(self.device)
+            with torch.no_grad():
+                q_values = self.dqn(state_tensor)
+                action_idx = torch.argmax(q_values).item()
 
-        # Get Q-values from DQN
-        with torch.no_grad():
-            q_values = self.dqn(state_tensor)
-            action_idx = torch.argmax(q_values).item()
-
-        return self.actions[action_idx]
+            return self.actions[action_idx]
+        else:
+            # NumPy CPU path
+            return self.numpy_agent.choose_action(state)
 
     def learn(self, state, action, reward, next_state):
-        """Learn using NVIDIA GPU-accelerated experience replay"""
-        self.update_state_size(state)
+        """Learn using appropriate backend"""
+        state = self._convert_state_to_numeric(state)
+        next_state = self._convert_state_to_numeric(next_state)
+        
+        if self.use_torch:
+            # PyTorch GPU learning
+            self.memory.append((state, self.actions.index(action), reward, next_state))
+            if len(self.memory) > self.memory_size:
+                self.memory.pop(0)
+            
+            # Train DQN if enough experiences
+            if len(self.memory) >= self.batch_size:
+                self._train_dqn()
 
-        # Store experience in replay buffer
-        self.memory.append((state, self.actions.index(action), reward, next_state))
-        if len(self.memory) > self.memory_size:
-            self.memory.pop(0)
-
-        # Update traditional Q-table as fallback
-        self._update_q_table(state, action, reward, next_state)
-
-        # Train DQN if enough experiences
-        if len(self.memory) >= self.batch_size:
-            self._train_dqn()
-
-        # Update target network periodically
-        self.step_count += 1
-        if self.step_count % self.update_target_every == 0:
-            self.target_dqn.load_state_dict(self.dqn.state_dict())
-
+            # Update target network periodically
+            self.step_count += 1
+            if self.step_count % self.update_target_every == 0:
+                self.target_dqn.load_state_dict(self.dqn.state_dict())
+        else:
+            # NumPy CPU learning
+            self.numpy_agent.learn(state, action, reward, next_state)
+        
         # Decay epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-
-    def _update_q_table(self, state, action, reward, next_state):
-        """Update traditional Q-table"""
-        state_key = self.get_state_key(state)
-        next_state_key = self.get_state_key(next_state)
-
-        if state_key not in self.q_table:
-            self.q_table[state_key] = {a: 0.0 for a in self.actions}
-        if next_state_key not in self.q_table:
-            self.q_table[next_state_key] = {a: 0.0 for a in self.actions}
-
-        predict = self.q_table[state_key][action]
-        target = reward + self.discount_factor * max(self.q_table[next_state_key].values())
-        self.q_table[state_key][action] += self.learning_rate * (target - predict)
 
     def _train_dqn(self):
         """Train DQN using NVIDIA GPU acceleration"""
@@ -197,19 +300,32 @@ class ReinforcementLearningAgent:
         self.optimizer.step()
 
     def reset_parameters(self, learning_rate=None, discount_factor=None, epsilon=None):
+        """Reset parameters"""
         if learning_rate is not None:
             self.learning_rate = learning_rate
         if discount_factor is not None:
             self.discount_factor = discount_factor
         if epsilon is not None:
             self.epsilon = epsilon
+            
+        if not self.use_torch and hasattr(self, 'numpy_agent'):
+            self.numpy_agent.reset_parameters(learning_rate, discount_factor, epsilon)
 
     def get_gpu_status(self):
         """Get NVIDIA GPU status for RL training"""
-        return {
-            "device": str(self.device),
-            "cuda_available": torch.cuda.is_available(),
-            "memory_allocated": torch.cuda.memory_allocated(self.device) / 1024**3 if torch.cuda.is_available() else 0,
-            "memory_reserved": torch.cuda.memory_reserved(self.device) / 1024**3 if torch.cuda.is_available() else 0,
-            "experience_buffer_size": len(self.memory)
-        }
+        if self.use_torch:
+            return {
+                "device": str(self.device),
+                "cuda_available": torch.cuda.is_available(),
+                "memory_allocated": torch.cuda.memory_allocated(self.device) / 1024**3 if torch.cuda.is_available() else 0,
+                "memory_reserved": torch.cuda.memory_reserved(self.device) / 1024**3 if torch.cuda.is_available() else 0,
+                "experience_buffer_size": len(self.memory)
+            }
+        else:
+            return {
+                "device": "numpy_cpu",
+                "cuda_available": False,
+                "memory_allocated": 0,
+                "memory_reserved": 0,
+                "experience_buffer_size": len(self.memory)
+            }

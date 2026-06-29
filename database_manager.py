@@ -149,7 +149,7 @@ class DatabaseManager:
             )
         ''')
 
-        # Employee Benefits table
+# Employee Benefits table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS employee_benefits (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -161,7 +161,7 @@ class DatabaseManager:
                 health_insurance_coverage_type TEXT,
                 life_insurance_status TEXT DEFAULT 'not_enrolled',
                 life_insurance_amount REAL,
-                life_insurance_provider TEXT,
+                life_insurance_coverage_provider TEXT,
                 life_insurance_premium REAL,
                 life_insurance_beneficiary TEXT,
                 k401_enrolled INTEGER DEFAULT 0,
@@ -640,16 +640,16 @@ class DatabaseManager:
             # life_insurance_premium, life_insurance_beneficiary, k401_enrolled,
             # k401_contribution_percentage, k401_employer_match_percentage,
             # k401_start_date, k401_current_balance, benefits_notes,
-            # created_at, updated_at
+# created_at, updated_at
             cursor.execute(
                 """INSERT OR REPLACE INTO employee_benefits 
                    (employee_id, health_insurance_plan, health_insurance_provider,
                     health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type, 
-                    life_insurance_status, life_insurance_amount, life_insurance_provider,
+                    life_insurance_status, life_insurance_amount, life_insurance_coverage_provider,
                     life_insurance_premium, life_insurance_beneficiary,
                     k401_enrolled, k401_contribution_percentage, k401_employer_match_percentage,
                     k401_start_date, k401_current_balance, benefits_notes)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (employee_id, health_insurance_plan, health_insurance_provider,
                  health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
                  life_insurance_status, life_insurance_amount, life_insurance_provider,

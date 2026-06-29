@@ -34,15 +34,20 @@ def test_employee_operations():
         employee_id='EMP001',
         health_insurance_plan='Premium',
         health_insurance_provider='Blue Cross',
+        health_insurance_start_date='2024-01-15',
         health_insurance_premium=500.0,
         health_insurance_coverage_type='family',
         life_insurance_status='enrolled',
         life_insurance_amount=100000,
         life_insurance_provider='MetLife',
         life_insurance_premium=50.0,
+        life_insurance_beneficiary='Jane Doe',
         k401_enrolled=True,
         k401_contribution_percentage=6.0,
-        k401_employer_match_percentage=4.0
+        k401_employer_match_percentage=4.0,
+        k401_start_date='2024-01-15',
+        k401_current_balance=0.0,
+        benefits_notes='Enrolled in benefits'
     )
     print('Add Benefits:', result)
     
@@ -53,7 +58,19 @@ def test_employee_operations():
         pay_period_start='2024-01-01',
         pay_period_end='2024-01-15',
         pay_date='2024-01-15',
-        base_salary=5000.0
+        base_salary=5000.0,
+        overtime_pay=0.0,
+        bonuses=0.0,
+        commissions=0.0,
+        federal_tax_rate=0.22,
+        state_tax_rate=0.05,
+        social_security_rate=0.062,
+        medicare_rate=0.0145,
+        health_insurance_premium=0.0,
+        life_insurance_premium=0.0,
+        k401_contribution=0.0,
+        other_deductions=0.0,
+        payment_method='direct_deposit'
     )
     print('Process Payroll:', payroll_result)
     

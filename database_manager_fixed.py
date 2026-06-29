@@ -6,41 +6,28 @@ Unified database interface for all AI systems with SQL and NoSQL support
 import sqlite3
 import json
 import logging
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
+from typing import Any, Dict, List, Optional
 from datetime import datetime
 
-# Optional database drivers - use TYPE_CHECKING to avoid linter errors
-# These imports are optional and will show as unavailable if not installed
-mongodb_available = False
-postgresql_available = False
-redis_available = False
-
-# MongoClient type for type hints only (avoids import error when pymongo not installed)
-if TYPE_CHECKING:
-    try:
-        from pymongo import MongoClient as MongoClientType
-        from pymongo.client import ClientOptions
-    except ImportError:
-        pass
-
-# Try to import optional database drivers at runtime
+# Optional database drivers
 try:
-    from pymongo import MongoClient  # noqa: F401
-    mongodb_available = True
+    import pymongo
+    from pymongo import MongoClient
+    MONGODB_AVAILABLE = True
 except ImportError:
-    MongoClient = None  # type: ignore
+    MONGODB_AVAILABLE = False
 
 try:
-    import psycopg2  # noqa: F401
-    postgresql_available = True
+    import psycopg2
+    POSTGRESQL_AVAILABLE = True
 except ImportError:
-    pass
+    POSTGRESQL_AVAILABLE = False
 
 try:
-    import redis  # noqa: F401
-    redis_available = True
+    import redis
+    REDIS_AVAILABLE = True
 except ImportError:
-    pass
+    REDIS_AVAILABLE = False
 
 class DatabaseManager:
     """Unified database manager supporting multiple database types"""
@@ -50,13 +37,13 @@ class DatabaseManager:
         self.config = config or self._default_config()
         self.connections: Dict[str, Any] = {}
 
-# Initialize databases
+        # Initialize databases
         self._init_sqlite()
-        if mongodb_available:
+        if MONGODB_AVAILABLE:
             self._init_mongodb()
-        if postgresql_available:
+        if POSTGRESQL_AVAILABLE:
             self._init_postgresql()
-        if redis_available:
+        if REDIS_AVAILABLE:
             self._init_redis()
 
     def _default_config(self) -> Dict[str, Any]:
@@ -81,7 +68,7 @@ class DatabaseManager:
                 "port": 6379,
                 "db": 0
             }
-}
+        }
 
     def _init_sqlite(self):
         """Initialize SQLite database"""
@@ -90,8 +77,8 @@ class DatabaseManager:
             self.connections["sqlite"] = sqlite3.connect(db_path)
             self._create_sqlite_tables()
             self.logger.info("SQLite database initialized")
-        except sqlite3.Error as e:
-            self.logger.error("SQLite initialization failed: %s", e)
+        except Exception as e:
+            self.logger.error(f"SQLite initialization failed: {e}")
 
     def _create_sqlite_tables(self):
         """Create necessary SQLite tables"""
@@ -120,7 +107,7 @@ class DatabaseManager:
             )
         ''')
 
-        # System metrics
+# System metrics
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -129,9 +116,9 @@ class DatabaseManager:
                 tags TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-''')
+        ''')
 
-        # Quantum computations
+# Quantum computations
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quantum_computations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,7 +149,7 @@ class DatabaseManager:
             )
         ''')
 
-        # Employee Benefits table
+# Employee Benefits table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS employee_benefits (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +161,7 @@ class DatabaseManager:
                 health_insurance_coverage_type TEXT,
                 life_insurance_status TEXT DEFAULT 'not_enrolled',
                 life_insurance_amount REAL,
-                life_insurance_provider TEXT,
+                life_insurance_coverage_provider TEXT,
                 life_insurance_premium REAL,
                 life_insurance_beneficiary TEXT,
                 k401_enrolled INTEGER DEFAULT 0,
@@ -230,7 +217,7 @@ class DatabaseManager:
                 performed_by TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-''')
+        ''')
 
         self.connections["sqlite"].commit()
 
@@ -241,21 +228,19 @@ class DatabaseManager:
             client = MongoClient(config["host"], config["port"])
             self.connections["mongodb"] = client[config["database"]]
             self.logger.info("MongoDB connection initialized")
-        except OSError as e:
-            self.logger.error("MongoDB initialization failed: %s", e)
+        except Exception as e:
+            self.logger.error(f"MongoDB initialization failed: {e}")
 
     def _init_postgresql(self):
         """Initialize PostgreSQL connection"""
         try:
             config = self.config["postgresql"]
-            conn_string = "host=%s port=%s dbname=%s user=%s password=%s" % (
-                config['host'], config['port'], config['database'],
-                config['user'], config['password'])
+            conn_string = f"host={config['host']} port={config['port']} dbname={config['database']} user={config['user']} password={config['password']}"
             self.connections["postgresql"] = psycopg2.connect(conn_string)
             self._create_postgresql_tables()
             self.logger.info("PostgreSQL connection initialized")
         except Exception as e:
-            self.logger.error("PostgreSQL initialization failed: %s", e)
+            self.logger.error(f"PostgreSQL initialization failed: {e}")
 
     def _create_postgresql_tables(self):
         """Create PostgreSQL tables if they don't exist"""
@@ -293,11 +278,11 @@ class DatabaseManager:
             """
         ]
 
-for table_sql in tables:
+        for table_sql in tables:
             try:
                 cursor.execute(table_sql)
             except Exception as e:
-                self.logger.warning("Table creation failed: %s", e)
+                self.logger.warning(f"Table creation failed: {e}")
 
         self.connections["postgresql"].commit()
         cursor.close()
@@ -420,12 +405,12 @@ for table_sql in tables:
         # Save to SQLite
         results.append(("sqlite", self.save_prediction_sqlite(model_name, input_data, prediction, confidence)))
 
-# Save to MongoDB if available
-        if mongodb_available:
+        # Save to MongoDB if available
+        if MONGODB_AVAILABLE:
             results.append(("mongodb", self.save_prediction_mongodb(model_name, input_data, prediction, confidence)))
 
         # Cache in Redis if available
-        if redis_available:
+        if REDIS_AVAILABLE:
             cache_key = f"prediction:{model_name}:{hash(str(input_data))}"
             cache_data = {
                 "model_name": model_name,
@@ -623,11 +608,12 @@ for table_sql in tables:
             return False
 
 # =============================================================================
-    # Employee Benefits Management Methods
+    # Employee Benefits Management
     # =============================================================================
 
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
                              health_insurance_provider: Optional[str] = None,
+                             health_insurance_start_date: Optional[str] = None,
                              health_insurance_premium: Optional[float] = None,
                              health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
@@ -637,24 +623,39 @@ for table_sql in tables:
                              life_insurance_beneficiary: Optional[str] = None,
                              k401_enrolled: bool = False,
                              k401_contribution_percentage: Optional[float] = None,
-                             k401_employer_match_percentage: Optional[float] = None) -> bool:
+                             k401_employer_match_percentage: Optional[float] = None,
+                             k401_start_date: Optional[str] = None,
+                             k401_current_balance: Optional[float] = None,
+                             benefits_notes: Optional[str] = None) -> bool:
         """Add or update employee benefits"""
         if "sqlite" not in self.connections:
             return False
 
         try:
             cursor = self.connections["sqlite"].cursor()
+            # Insert using INSERT OR REPLACE - table has 20 columns total
+            # Columns: id, employee_id, health_insurance_plan, health_insurance_provider,
+            # health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+            # life_insurance_status, life_insurance_amount, life_insurance_provider,
+            # life_insurance_premium, life_insurance_beneficiary, k401_enrolled,
+            # k401_contribution_percentage, k401_employer_match_percentage,
+            # k401_start_date, k401_current_balance, benefits_notes,
+# created_at, updated_at
             cursor.execute(
                 """INSERT OR REPLACE INTO employee_benefits 
-                   (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                    health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                    life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                 health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                 life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
-                 k401_contribution_percentage, k401_employer_match_percentage)
+                   (employee_id, health_insurance_plan, health_insurance_provider,
+                    health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type, 
+                    life_insurance_status, life_insurance_amount, life_insurance_coverage_provider,
+                    life_insurance_premium, life_insurance_beneficiary,
+                    k401_enrolled, k401_contribution_percentage, k401_employer_match_percentage,
+                    k401_start_date, k401_current_balance, benefits_notes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (employee_id, health_insurance_plan, health_insurance_provider,
+                 health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+                 life_insurance_status, life_insurance_amount, life_insurance_provider,
+                 life_insurance_premium, life_insurance_beneficiary,
+                 1 if k401_enrolled else 0, k401_contribution_percentage, k401_employer_match_percentage,
+                 k401_start_date, k401_current_balance, benefits_notes)
             )
             self.connections["sqlite"].commit()
             return True
