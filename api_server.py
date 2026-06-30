@@ -759,7 +759,7 @@ async def get_oscar_portfolio():
                 {"symbol": "HEALTHCARE_STOCK", "expected_return": 0.10, "volatility": 0.20, "price": 300.0, "quantity": 30},
                 {"symbol": "ENERGY_STOCK", "expected_return": 0.15, "volatility": 0.35, "price": 100.0, "quantity": 75}
             ],
-            "total_value": 47500.0,
+"total_value": 47500.0,
             "sharpe_ratio": 0.2632
         }
     
