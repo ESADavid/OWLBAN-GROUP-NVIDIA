@@ -131,7 +131,7 @@ class AuthManager:
                 with open(self.user_store_file, 'r', encoding='utf-8') as f:
                     user_data = json.load(f)
                     self.users = {email: User.from_dict(data) for email, data in user_data.items()}
-        except Exception as e:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             logger.error("Failed to load user data: %s", e)
 
         try:
@@ -139,7 +139,7 @@ class AuthManager:
                 with open(self.session_store_file, 'r', encoding='utf-8') as f:
                     session_data = json.load(f)
                     self.sessions = {sid: Session(**data) for sid, data in session_data.items()}
-        except Exception as e:
+        except (json.JSONDecodeError, IOError, OSError) as e:
             logger.error("Failed to load session data: %s", e)
 
     def _save_data(self):
@@ -432,7 +432,7 @@ class AuthManager:
             logger.info("Password reset requested for non-existent user: %s", email)
             return True, "If the email exists, a reset link will be sent"
 
-# Generate reset token
+        # Generate reset token
         token = secrets.token_urlsafe(32)
         now = datetime.now(timezone.utc)
         

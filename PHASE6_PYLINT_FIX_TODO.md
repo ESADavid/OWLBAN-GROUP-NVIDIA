@@ -1,61 +1,79 @@
-# Phase 6: Pylint Fixes for auth_lib.py
+# Pylint Diagnostics Fix Plan for auth_lib.py
 
-## Status: IN PROGRESS
+## Information Gathered
 
-### Issues to Fix
+Analyzed `auth_lib.py` (~600 lines) and identified the following Pylint warnings:
 
-#### 1. Broad Exception Caught (W0718) - 4 instances
+### Warning Categories
 
-- [ ] Line 134: Replace `Exception` with specific exception type
-- [ ] Line 142: Replace `Exception` with specific exception type
-- [ ] Line 151: Replace `Exception` with specific exception type
-- [ ] Line 163: Replace `Exception` with specific exception type
+1. **W0718: broad-exception-caught** (4 occurrences)
+   - Lines 134, 142, 151, 163
+   - Catching generic `Exception` in try-except blocks
 
-#### 2. Redefined Outer Name (W0621) - ~16 instances
+2. **W0621: redefined-outer-name** (16 occurrences)
+   - Variables like `user`, `message`, `access_token`, `refresh_token`, `payload` being redefined in functions
+   - Happens when iterating with `for user in self.users.values()` while `User` is a class
 
-- [ ] Lines 221, 228, 246, 274, 298, 299, 306, 313, 316, 320, 330, 379, 403, 429, 458, 483
-- [ ] Rename local variables to avoid shadowing outer scope
+3. **W0613: unused-argument** (2 occurrences)
+   - Lines 243, 244: `ip_address`, `user_agent` in `authenticate_user`
 
-#### 3. Unused Argument (W0613) - 2 instances
+4. **C0116: missing-function-docstring** (6 occurrences)
+   - Lines 43, 52, 567, 570, 573, 577 - Functions missing docstrings
 
-- [ ] Line 243: ip_address not used
-- [ ] Line 244: user_agent not used
+5. **C0301: line-too-long** (multiple)
+   - Lines exceeding 100 character limit
 
-#### 4. Missing Function Docstring (C0116) - 5 instances
+6. **C0209: consider-using-f-string** (multiple)
+   - Old-style string formatting should be f-strings
 
-- [ ] Line 43: Add docstring
-- [ ] Line 52: Add docstring
-- [ ] Line 567: Add docstring
-- [ ] Line 570: Add docstring
-- [ ] Line 573: Add docstring
-- [ ] Line 577: Add docstring
+7. **C0303: trailing-whitespace** (multiple)
+   - Trailing whitespace on several lines
 
-#### 5. Line Too Long (C0301) - Multiple instances
+## Fix Plan
 
-- [ ] Fix lines > 100 characters
+### Step 1: Fix Broad Exception Handling
 
-#### 6. Trailing Whitespace (C0303) - 6 instances
+Replace generic `except Exception` with specific exceptions:
 
-- [ ] Lines 438, 446, 448, 452, 490, 497: Remove trailing whitespace
+- `json.JSONDecodeError` for JSON parsing
+- `IOError` / `OSError` for file operations
+- `jwt.InvalidTokenError` for JWT issues
 
-#### 7. Consider Using F-String (C0209) - Multiple instances
+### Step 2: Fix Redefined Outer Names
 
-- [ ] Convert % formatting to f-strings where appropriate
+Rename loop variables to avoid conflicts:
 
-### Priority Order
+- Change `for user in self.users.values()` to `for user_obj in self.users.values()`
+- Change `message` to `msg` or similar
+- Change `payload` to `token_payload`
 
-1. Broad exception catching (critical)
-2. Missing docstrings (convention)
-3. Line lengths (convention)
-4. Trailing whitespace (convention)
-5. Redefined outer names (warning)
-6. Unused arguments (warning)
-7. F-string conversion (convention)
+### Step 3: Fix Unused Arguments
 
-### Files to Edit
+Either use the arguments or prefix with underscore to indicate intentionally unused:
 
-- auth_lib.py
+- `_ip_address`, `_user_agent`
 
-### Testing
+### Step 4: Add Missing Docstrings
 
-- Run `python check_syntax.py` after fixes
+Add docstrings to functions at lines 43, 52, 567, 570, 573, 577
+
+### Step 5: Fix Line Too Long
+
+Break long lines at appropriate points
+
+### Step 6: Convert to F-Strings
+
+Replace `% formatting` with f-strings
+
+### Step 7: Remove Trailing Whitespace
+
+Strip trailing whitespace
+
+## Dependent Files
+
+None - directly editing auth_lib.py
+
+## Followup Steps
+
+1. Run pylint to verify fixes
+2. Test authentication functionality
