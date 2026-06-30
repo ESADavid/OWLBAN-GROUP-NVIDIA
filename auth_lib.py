@@ -37,11 +37,10 @@ class User:
     active: bool = True
 
     def __post_init__(self):
-        """Initialize created_at if not provided."""
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc)
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
         # Convert datetime objects to ISO strings
         for key, value in data.items():
@@ -100,7 +99,6 @@ class PasswordResetToken:
     expires_at: datetime
     used: bool = False
 
-@dataclass
 class CSRFToken:
     """CSRF token data structure"""
     token: str
@@ -132,7 +130,7 @@ class AuthManager:
                 with open(self.user_store_file, 'r', encoding='utf-8') as f:
                     user_data = json.load(f)
                     self.users = {email: User.from_dict(data) for email, data in user_data.items()}
-        except (json.JSONDecodeError, IOError, OSError) as e:
+        except Exception as e:
             logger.error("Failed to load user data: %s", e)
 
         try:
@@ -140,7 +138,7 @@ class AuthManager:
                 with open(self.session_store_file, 'r', encoding='utf-8') as f:
                     session_data = json.load(f)
                     self.sessions = {sid: Session(**data) for sid, data in session_data.items()}
-        except (json.JSONDecodeError, IOError, OSError) as e:
+        except Exception as e:
             logger.error("Failed to load session data: %s", e)
 
     def _save_data(self):
@@ -149,18 +147,19 @@ class AuthManager:
             user_data = {email: user.to_dict() for email, user in self.users.items()}
             with open(self.user_store_file, 'w', encoding='utf-8') as f:
                 json.dump(user_data, f, indent=2)
-        except (IOError, OSError) as e:
+        except Exception as e:
             logger.error("Failed to save user data: %s", e)
 
         try:
             session_data = {sid: asdict(session) for sid, session in self.sessions.items()}
+            # Convert datetime objects to ISO strings
             for data in session_data.values():
                 for key in ['created_at', 'expires_at']:
                     if isinstance(data[key], datetime):
                         data[key] = data[key].isoformat()
             with open(self.session_store_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2)
-except (IOError, OSError) as e:
+        except Exception as e:
             logger.error("Failed to save session data: %s", e)
 
     def _create_default_admin(self):
@@ -205,8 +204,8 @@ except (IOError, OSError) as e:
         """Verify a password against its hash"""
         return bcrypt.checkpw(password.encode(), password_hash.encode())
 
-    def create_user(self, email: str, username: str, password: str, role: str = 'user',
-                    company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
+def create_user(self, email: str, username: str, password: str, role: str = 'user',
+                   company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
         """Create a new user"""
         if email in self.users:
             return False, "User already exists"
@@ -240,8 +239,8 @@ except (IOError, OSError) as e:
         logger.info("User created: %s", email)
         return True, "User created successfully"
 
-    def authenticate_user(self, email: str, password: str, _ip_address: Optional[str] = None,
-                          _user_agent: Optional[str] = None) -> Tuple[bool, str, Optional[User]]:
+    def authenticate_user(self, email: str, password: str, ip_address: Optional[str] = None,
+                         user_agent: Optional[str] = None) -> Tuple[bool, str, Optional[User]]:
         """Authenticate a user"""
         user = self.users.get(email)
         if not user:
@@ -342,8 +341,8 @@ except (IOError, OSError) as e:
             created_at=now,
             expires_at=now + timedelta(hours=24),  # Sessions last 24 hours
             ip_address=ip_address,
-user_agent=user_agent
-        )
+            user_agent=user_agent
+)
 
         self.sessions[session_id] = session
         self._save_data()
@@ -443,7 +442,7 @@ user_agent=user_agent
             expires_at=now + timedelta(hours=1),  # Token expires in 1 hour
             used=False
         )
-        
+
         self.password_reset_tokens[token] = reset_token
         
         # In production, send email here
@@ -459,7 +458,7 @@ user_agent=user_agent
         if not valid:
             return False, message
 
-        # Find the reset token
+# Find the reset token
         token_obj = self.password_reset_tokens.get(reset_token)
         if not token_obj:
             logger.warning("Invalid password reset token used")
