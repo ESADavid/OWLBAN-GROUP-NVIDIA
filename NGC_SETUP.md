@@ -6,8 +6,8 @@ This guide provides instructions for setting up the NVIDIA NGC Private Registry 
 
 Before starting, ensure you have:
 
-1. **NVIDIA NGC Account**: Create one at https://ngc.nvidia.com/
-2. **NGC API Key**: Generate at https://ngc.nvidia.com/setup/api-key
+1. **NVIDIA NGC Account**: Create one at <https://ngc.nvidia.com/>
+2. **NGC API Key**: Generate at <https://ngc.nvidia.com/setup/api-key>
 3. **Docker**: Installed and running
 4. **Git**: Installed
 
@@ -47,11 +47,13 @@ echo $NGC_API_KEY | docker login nvcr.io -u $oauthtoken --password-stdin
 ### Docker Registry Authentication
 
 1. Create Docker config directory:
+
 ```bash
 mkdir -p ~/.docker
 ```
 
-2. Create Docker config file with NGC credentials:
+1. Create Docker config file with NGC credentials:
+
 ```bash
 # Create ~/.docker/config.json with the following content:
 {
@@ -68,6 +70,7 @@ mkdir -p ~/.docker
 ### NGC CLI Installation
 
 1. Download NGC CLI:
+
 ```bash
 # Linux/macOS
 curl -s https://api.ngc.nvidia.com/download/ngc-cli/ngccli -o ngc.zip
@@ -77,7 +80,8 @@ unzip -q ngc.zip
 # Use the Windows installer from https://ngc.nvidia.com/resources
 ```
 
-2. Add to PATH:
+1. Add to PATH:
+
 ```bash
 # Linux/macOS (add to ~/.bashrc or ~/.zshrc)
 export PATH=~/ngc-cli/ngc:$PATH
@@ -86,7 +90,8 @@ export PATH=~/ngc-cli/ngc:$PATH
 # Add to System Environment Variables -> Path
 ```
 
-3. Configure NGC CLI:
+1. Configure NGC CLI:
+
 ```bash
 ngc config set ngc_api_key YOUR_NGC_API_KEY
 ```
@@ -120,7 +125,7 @@ docker-compose ps
 The following environment variables are used:
 
 | Variable | Description |
-|----------|-------------|
+| --------- | ------------ |
 | `NGC_API_KEY` | Your NGC API key |
 | `DOCKER_CONFIG` | Path to Docker config (default: `ngc/docker`) |
 
@@ -168,6 +173,7 @@ The project uses NGC private registry for:
 ## Support
 
 For issues or questions:
+
 1. Check NVIDIA GPU Cloud documentation
 2. Contact your NVIDIA enterprise representative
 3. Submit support tickets through NGC portal

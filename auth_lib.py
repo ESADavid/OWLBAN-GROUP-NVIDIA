@@ -160,7 +160,7 @@ class AuthManager:
                         data[key] = data[key].isoformat()
             with open(self.session_store_file, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, indent=2)
-        except (IOError, OSError) as e:
+except (IOError, OSError) as e:
             logger.error("Failed to save session data: %s", e)
 
     def _create_default_admin(self):
@@ -205,8 +205,8 @@ class AuthManager:
         """Verify a password against its hash"""
         return bcrypt.checkpw(password.encode(), password_hash.encode())
 
-def create_user(self, email: str, username: str, password: str, role: str = 'user',
-                   company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
+    def create_user(self, email: str, username: str, password: str, role: str = 'user',
+                    company: str = 'OWLBAN_GROUP', permissions: Optional[List[str]] = None) -> Tuple[bool, str]:
         """Create a new user"""
         if email in self.users:
             return False, "User already exists"
@@ -240,8 +240,8 @@ def create_user(self, email: str, username: str, password: str, role: str = 'use
         logger.info("User created: %s", email)
         return True, "User created successfully"
 
-def authenticate_user(self, email: str, password: str, _ip_address: Optional[str] = None,
-                         _user_agent: Optional[str] = None) -> Tuple[bool, str, Optional[User]]:
+    def authenticate_user(self, email: str, password: str, _ip_address: Optional[str] = None,
+                          _user_agent: Optional[str] = None) -> Tuple[bool, str, Optional[User]]:
         """Authenticate a user"""
         user = self.users.get(email)
         if not user:
