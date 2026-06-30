@@ -317,9 +317,9 @@ def verify_employees():
 
 def main():
     """Main function to add all three employees"""
-    logger.info("=" * 60)
-    logger.info("ADDING EMPLOYEES: Oscar Broome, David Leeper, Sandra Edwards")
-    logger.info("=" * 60)
+    logger.info("%s", "=" * 60)
+    logger.info("%s", "ADDING EMPLOYEES: Oscar Broome, David Leeper, Sandra Edwards")
+    logger.info("%s", "=" * 60)
 
     results = {}
 

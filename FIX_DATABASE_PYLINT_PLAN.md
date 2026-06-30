@@ -1,56 +1,97 @@
-# Fix Plan for database_manager.py
+# Database Manager Pylint Fix Plan
 
-## Information Gathered
+## Issues to Fix
 
-### Issues Identified from Diagnostics
+### 1. W0718:broad-exception-caught
 
-1. **Mypy Error (line 8):** "Unrecognized option: ignore_missing_import = True"
-   - Cause: `# mypy: ignore-missing-import` is not valid mypy directive syntax in Python
-   - Fix: Remove this comment or use proper error suppression
+Replace generic `except Exception:` with more specific exception types:
 
-2. **Missing Module (lines 18-19):** "Cannot find implementation or library stub for module named 'pymongo'"
-   - Cause: pymongo is not installed in the environment
-   - Fix: The code already handles this with try/except, but the import is flagged as unused
+- sqlite3.Error for SQLite operations
+- json.JSONDecodeError for JSON operations  
+- redis.RedisError for Redis operations
+- ConnectionError for network operations
+- ValueError for validation errors
 
-3. **Unused Import (line 18):** "Unused import pymongo"
-   - Cause: The conditional import structure makes it appear unused to Pylint
-   - Fix: Add pylint disable comment or restructure imports
+### 2. W1203:logging-fstring-interpolation
 
-4. **Line Too Long Errors (multiple lines):**
-   - Lines: 246, 312, 320, 329, 338, 342, 361, 409, 414, 418, 472, 480, 500, 508, 529, 531, 556, 595, 642-648, 717, 739-741, 753-755, 784-788, 791
-   - Fix: Break long lines to max 100 characters
+Replace f-strings in logging with lazy % formatting:
 
-5. **Dictionary .keys() Iteration (lines 590, 712):**
-   - "Consider iterating the dictionary directly instead of calling .keys()"
-   - Fix: Change `.keys()` to direct iteration
+- `self.logger.error(f"message: {e}")` → `self.logger.error("message: %s", e)`
 
-## Plan
+### 3. C0301:line-too-long
 
-### Step 1: Fix mypy directive comment
+Break lines longer than 100 characters using:
 
-- Remove invalid `# mypy: ignore-missing-import` comment from line 8
+- Line continuation with parentheses
+- Split into multiple assignments
+- Use intermediate variables
 
-### Step 2: Add pylint disable comments for pymongo imports
+### 4. C0201:consider-iterating-dictionary
 
-- Add `# pylint: disable=unused-import` for the conditional import block
+Replace `for key in dictionary.keys():` with `for key in dictionary:`
 
-### Step 3: Fix line-too-long errors
+## Line Numbers to Fix
 
-- Break long SQL queries and method signatures across multiple lines
-- Use proper indentation for continuation lines
+- Line 80-81: broad-exception + logging fstring
+- Line 231-232: broad-exception + logging fstring
+- Line 242-243: broad-exception + logging fstring
+- Line 284-285: broad-exception + logging fstring
+- Line 300-301: broad-exception + logging fstring
+- Line 317-318: broad-exception + logging fstring
+- Line 348-349: broad-exception + logging fstring
+- Line 369-370: broad-exception + logging fstring
+- Line 382-383: broad-exception + logging fstring
+- Line 396-397: broad-exception + logging fstring
+- Line 443-444: broad-exception + logging fstring
+- Line 460-461: broad-exception + logging fstring
+- Line 477-478: broad-exception + logging fstring
+- Line 501: broad-exception
+- Line 527-528: broad-exception + logging fstring
+- Line 544-545: broad-exception + logging fstring
+- Line 571-572: broad-exception + logging fstring
+- Line 592-593: broad-exception + logging fstring
+- Line 606-607: broad-exception + logging fstring
+- Line 662-663: broad-exception + logging fstring
+- Line 682-683: broad-exception + logging fstring
+- Line 709-710: broad-exception + logging fstring
+- Line 730731: broad-exception + logging fstring
+- Line 753-754: broad-exception + logging fstring
+- Lines 582, 720: .keys() iteration
+- Line 238: Line too long (152/100)
+- Line 304: Line too long (108/100)
+- Line 312: Line too long (111/100)
+- Line 321: Line too long (103/100)
+- Line 330: Line too long (101/100)
+- Line 334: Line too long (101/100)
+- Line 353: Line too long (109/100)
+- Line 401: Line too long (101/100)
+- Line 406: Line too long (111/100)
+- Line 410: Line too long (117/100)
+- Line 464: Line too long (115/100)
+- Line 472: Line too long (125/100)
+- Line 492: Line too long (108/100)
+- Line 500: Line too long (102/100)
+- Line 521: Line too long (132/100)
+- Line 523: Line too long (107/100)
+- Line 548: Line too long (128/100)
+- Line 587: Line too long (107/100)
+- Line 647: Line too long (107/100)
+- Line 654: Line too long (103/100)
+- Line 657: Line too long (105/100)
+- Line 725: Line too long (115/100)
+- Line 747: Line too long (111/100)
+- Line 749: Line too long (108/100)
+- Line 761: Line too long (108/100)
+- Line 762: Line too long (103/100)
+- Line 763: Line too long (109/100)
+- Line 792-796: Line too long (multiple)
+- Line 799: Line too long (101/100)
 
-### Step 4: Fix dictionary iteration
+## Implementation Strategy
 
-- Change `.keys()` to direct dictionary iteration at lines 590 and 712
-
-### Step 5: Verify changes
-
-- Run Pylint to confirm errors are resolved
-
-## Files to Edit
-
-- `database_manager.py`
-
-## Dependencies
-
-- No external file dependencies required
+1. Create fixed version of database_manager.py
+2. Fix all broad-exception errors
+3. Fix all logging fstring errors  
+4. Fix line-too-long issues
+5. Fix dictionary iteration issues
+6. Test the fixed version
