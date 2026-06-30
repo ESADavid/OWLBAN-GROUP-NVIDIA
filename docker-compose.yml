@@ -250,12 +250,14 @@ services:
   triton-server:
     image: nvcr.io/nvidia/tritonserver:23.10-py3
     ports:
-      - "8001:8001"  # HTTP
-      - "8002:8002"  # gRPC
+      - "8001:8001"
+      - "8002:8002"
     volumes:
       - ./models:/models
+      - ./ngc/docker/config.json:/docker-credentials.json:ro
     environment:
       - CUDA_VISIBLE_DEVICES=all
+      - NGC_API_KEY=${NGC_API_KEY:-}
     networks:
       - owlban-network
     restart: unless-stopped
@@ -266,6 +268,11 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/v2/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Quantum Computing Simulator (for development)
   qiskit-simulator:
