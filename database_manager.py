@@ -16,7 +16,6 @@ try:
     MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
-    MongoClient = None
 
 try:
     import psycopg2
@@ -108,7 +107,7 @@ class DatabaseManager:
             )
         ''')
 
-        # System metrics
+# System metrics
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS system_metrics (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -117,9 +116,9 @@ class DatabaseManager:
                 tags TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-''')
+        ''')
 
-        # Quantum computations
+# Quantum computations
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS quantum_computations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -150,7 +149,7 @@ class DatabaseManager:
             )
         ''')
 
-        # Employee Benefits table
+# Employee Benefits table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS employee_benefits (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,7 +161,7 @@ class DatabaseManager:
                 health_insurance_coverage_type TEXT,
                 life_insurance_status TEXT DEFAULT 'not_enrolled',
                 life_insurance_amount REAL,
-                life_insurance_provider TEXT,
+                life_insurance_coverage_provider TEXT,
                 life_insurance_premium REAL,
                 life_insurance_beneficiary TEXT,
                 k401_enrolled INTEGER DEFAULT 0,
@@ -216,7 +215,7 @@ class DatabaseManager:
                 new_value TEXT,
                 effective_date TEXT,
                 performed_by TEXT,
-created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
 
@@ -224,16 +223,13 @@ created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 
     def _init_mongodb(self):
         """Initialize MongoDB connection"""
-        if MongoClient is None:
-            self.logger.warning("MongoDB not available - pymongo not installed")
-            return
         try:
             config = self.config["mongodb"]
             client = MongoClient(config["host"], config["port"])
             self.connections["mongodb"] = client[config["database"]]
             self.logger.info("MongoDB connection initialized")
         except Exception as e:
-            self.logger.error("MongoDB initialization failed: %s", e)
+            self.logger.error(f"MongoDB initialization failed: {e}")
 
     def _init_postgresql(self):
         """Initialize PostgreSQL connection"""
@@ -612,11 +608,12 @@ created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             return False
 
 # =============================================================================
-    # Employee Benefits Management Methods
+    # Employee Benefits Management
     # =============================================================================
 
     def add_employee_benefits(self, employee_id: str, health_insurance_plan: Optional[str] = None,
                              health_insurance_provider: Optional[str] = None,
+                             health_insurance_start_date: Optional[str] = None,
                              health_insurance_premium: Optional[float] = None,
                              health_insurance_coverage_type: Optional[str] = None,
                              life_insurance_status: str = "not_enrolled",
@@ -626,24 +623,39 @@ created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                              life_insurance_beneficiary: Optional[str] = None,
                              k401_enrolled: bool = False,
                              k401_contribution_percentage: Optional[float] = None,
-                             k401_employer_match_percentage: Optional[float] = None) -> bool:
+                             k401_employer_match_percentage: Optional[float] = None,
+                             k401_start_date: Optional[str] = None,
+                             k401_current_balance: Optional[float] = None,
+                             benefits_notes: Optional[str] = None) -> bool:
         """Add or update employee benefits"""
         if "sqlite" not in self.connections:
             return False
 
         try:
             cursor = self.connections["sqlite"].cursor()
+            # Insert using INSERT OR REPLACE - table has 20 columns total
+            # Columns: id, employee_id, health_insurance_plan, health_insurance_provider,
+            # health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+            # life_insurance_status, life_insurance_amount, life_insurance_provider,
+            # life_insurance_premium, life_insurance_beneficiary, k401_enrolled,
+            # k401_contribution_percentage, k401_employer_match_percentage,
+            # k401_start_date, k401_current_balance, benefits_notes,
+# created_at, updated_at
             cursor.execute(
                 """INSERT OR REPLACE INTO employee_benefits 
-                   (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                    health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                    life_insurance_premium, life_insurance_beneficiary, k401_enrolled, k401_contribution_percentage,
-                    k401_employer_match_percentage, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (employee_id, health_insurance_plan, health_insurance_provider, health_insurance_premium,
-                 health_insurance_coverage_type, life_insurance_status, life_insurance_amount, life_insurance_provider,
-                 life_insurance_premium, life_insurance_beneficiary, 1 if k401_enrolled else 0,
-                 k401_contribution_percentage, k401_employer_match_percentage)
+                   (employee_id, health_insurance_plan, health_insurance_provider,
+                    health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type, 
+                    life_insurance_status, life_insurance_amount, life_insurance_coverage_provider,
+                    life_insurance_premium, life_insurance_beneficiary,
+                    k401_enrolled, k401_contribution_percentage, k401_employer_match_percentage,
+                    k401_start_date, k401_current_balance, benefits_notes)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (employee_id, health_insurance_plan, health_insurance_provider,
+                 health_insurance_start_date, health_insurance_premium, health_insurance_coverage_type,
+                 life_insurance_status, life_insurance_amount, life_insurance_provider,
+                 life_insurance_premium, life_insurance_beneficiary,
+                 1 if k401_enrolled else 0, k401_contribution_percentage, k401_employer_match_percentage,
+                 k401_start_date, k401_current_balance, benefits_notes)
             )
             self.connections["sqlite"].commit()
             return True
