@@ -348,7 +348,7 @@ def main():
     results['verified'] = verify_employees()
 
     # Summary
-    logger.info("\n" + "=" * 60)
+    logger.info("\n%s", "=" * 60)
     logger.info("SUMMARY")
     logger.info("=" * 60)
     logger.info("Employees Added: %d/3", results.get('employees', 0))

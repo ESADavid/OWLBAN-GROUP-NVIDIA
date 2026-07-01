@@ -1,6 +1,12 @@
 """
 OWLBAN GROUP AI Database Manager
 Unified database interface for all AI systems with SQL and NoSQL support
+
+Pylint disable justifications:
+- broad-exception-caught: Intentionally catches broad Exception for database resilience
+- logging-fstring-interpolation: Legacy logging pattern maintained for consistency
+- line-too-long: Necessary for SQL statements and long queries
+- consider-iterating-dictionary: .keys() used for explicit clarity in some contexts
 """
 
 import sqlite3
@@ -11,8 +17,7 @@ from datetime import datetime
 
 # Optional database drivers
 try:
-    import pymongo
-    from pymongo import MongoClient
+    from pymongo import MongoClient  # type: ignore
     MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
